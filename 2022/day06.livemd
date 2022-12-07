@@ -1,0 +1,37 @@
+# Day 06
+
+## Section
+
+```elixir
+defmodule Day06 do
+  def part1(input_path) do
+    solve(input_path, 4)
+  end
+
+  def part2(input_path) do
+    solve(input_path, 14)
+  end
+
+  defp solve(input_path, chunk_size) do
+    input_path
+    |> File.open!([:read, :charlist], &IO.read(&1, :eof))
+    |> Stream.chunk_every(chunk_size, 1, :discard)
+    |> Stream.map(&Enum.uniq/1)
+    |> Stream.map(&length/1)
+    |> Enum.find_index(&(&1 == chunk_size))
+    |> Kernel.+(chunk_size)
+  end
+end
+```
+
+```elixir
+input_path = "#{__DIR__}/day06.txt"
+```
+
+```elixir
+Day06.part1(input_path)
+```
+
+```elixir
+Day06.part2(input_path)
+```

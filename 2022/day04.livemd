@@ -1,0 +1,38 @@
+# Day 04
+
+## Section
+
+```elixir
+defmodule Day04 do
+  def part1(input_path) do
+    input_path
+    |> File.read!()
+    |> String.split(~r/\D+/m, global: true, trim: true)
+    |> Stream.map(&String.to_integer/1)
+    |> Stream.chunk_every(4)
+    |> Enum.count(fn [a1, b1, a2, b2] ->
+      (a1 <= a2 and b1 >= b2) or
+        (a1 >= a2 and b1 <= b2)
+    end)
+  end
+
+  def part2(input_path) do
+    input_path
+    |> File.read!()
+    |> String.split(~r/\D+/m, global: true, trim: true)
+    |> Stream.map(&String.to_integer/1)
+    |> Stream.chunk_every(4)
+    |> Enum.count(fn [a1, b1, a2, b2] ->
+      a1 <= b2 and a2 <= b1
+    end)
+  end
+end
+```
+
+```elixir
+input_file = "#{__DIR__}/day04.txt"
+```
+
+```elixir
+Day04.part1(input_file)
+```

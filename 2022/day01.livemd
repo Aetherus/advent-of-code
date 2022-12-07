@@ -1,0 +1,56 @@
+# Day 01
+
+## Section
+
+```elixir
+defmodule Day01 do
+  def part1(input_file_path) do
+    input_file_path
+    |> prepare()
+    |> Enum.max()
+  end
+
+  def part2(input_file_path) do
+    input_file_path
+    |> prepare()
+    |> top3()
+    |> Enum.sum()
+  end
+
+  defp prepare(input_file_path) do
+    input_file_path
+    |> File.stream!()
+    |> Stream.map(&String.trim/1)
+    |> Stream.chunk_by(&(&1 == ""))
+    |> Stream.reject(&(&1 == [""]))
+    |> Stream.map(&sum_chunk/1)
+  end
+
+  defp sum_chunk(chunk) do
+    chunk
+    |> Stream.map(&String.to_integer/1)
+    |> Enum.sum()
+  end
+
+  defp top3(enumerable) do
+    Enum.reduce(enumerable, [0, 0, 0], fn
+      n, [t1, t2, _t3] when n > t1 -> [n, t1, t2]
+      n, [t1, t2, _t3] when n > t2 -> [t1, n, t2]
+      n, [t1, t2, t3] when n > t3 -> [t1, t2, n]
+      _, tops -> tops
+    end)
+  end
+end
+```
+
+```elixir
+input_file_path = "#{__DIR__}/day01.txt"
+```
+
+```elixir
+Day01.part1(input_file_path)
+```
+
+```elixir
+Day01.part2(input_file_path)
+```

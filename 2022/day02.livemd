@@ -1,0 +1,67 @@
+# Day 02
+
+## Section
+
+```elixir
+defmodule Day02 do
+  def part1(input_path) do
+    input_path
+    |> File.stream!()
+    |> Stream.map(&String.trim/1)
+    |> Stream.map(&score1/1)
+    |> Enum.sum()
+  end
+
+  def part2(input_path) do
+    input_path
+    |> File.stream!()
+    |> Stream.map(&String.trim/1)
+    |> Stream.map(&score2/1)
+    |> Enum.sum()
+  end
+
+  # A = Rock = 1
+  # B = Paper = 2
+  # C = Scissors = 3
+  # X = Rock = 1
+  # Y = Paper = 2
+  # Z = Scissors = 3
+  defp score1("B X"), do: 1
+  defp score1("C Y"), do: 2
+  defp score1("A Z"), do: 3
+  defp score1("A X"), do: 4
+  defp score1("B Y"), do: 5
+  defp score1("C Z"), do: 6
+  defp score1("C X"), do: 7
+  defp score1("A Y"), do: 8
+  defp score1("B Z"), do: 9
+
+  # A = Rock = 1
+  # B = Paper = 2
+  # C = Scissors = 3
+  # X = Lose = 0
+  # Y = Draw = 3
+  # Z = Win = 6
+  defp score2("B X"), do: 1
+  defp score2("C X"), do: 2
+  defp score2("A X"), do: 3
+  defp score2("A Y"), do: 4
+  defp score2("B Y"), do: 5
+  defp score2("C Y"), do: 6
+  defp score2("C Z"), do: 7
+  defp score2("A Z"), do: 8
+  defp score2("B Z"), do: 9
+end
+```
+
+```elixir
+input_file = "#{__DIR__}/day02.txt"
+```
+
+```elixir
+Day02.part1(input_file)
+```
+
+```elixir
+Day02.part2(input_file)
+```

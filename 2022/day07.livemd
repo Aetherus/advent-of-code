@@ -1,0 +1,237 @@
+# Day 07
+
+## Data structure
+
+```elixir
+defmodule FSNode do
+  @moduledoc """
+  A node representing either a file or a dir.
+  """
+
+  @type filename :: String.t()
+
+  @type t :: %__MODULE__{
+          dir?: boolean,
+          size: non_neg_integer,
+          children: %{optional(filename) => t}
+        }
+
+  defstruct dir?: false, size: 0, children: %{}
+
+  @doc """
+  Create a node representing an empty dir.
+  """
+  @spec dir() :: t
+  def dir do
+    %__MODULE__{dir?: true}
+  end
+
+  @doc """
+  Create a node representing a file of a specific size.
+  """
+  @spec file(non_neg_integer) :: t
+  def file(size) do
+    %__MODULE__{dir?: false, size: size}
+  end
+
+  @doc """
+  Adds a child to the current node if the current node is a dir.
+  """
+  @spec add_child!(current_node :: t, filename, child :: t) :: t
+  def add_child!(%__MODULE__{dir?: true} = curr, name, %__MODULE__{} = child) do
+    %{curr | size: curr.size + child.size, children: Map.put(curr.children, name, child)}
+  end
+
+  def add_child!(%__MODULE__{dir?: false}, _, _) do
+    raise ArgumentError, "Can't add children to a file."
+  end
+
+  @doc """
+  Pop the child of specific filename from the current node.
+  """
+  @spec pop_child!(dir :: t, filename) :: {child :: t, dir_without_child :: t}
+  def pop_child!(%__MODULE__{dir?: true} = curr, name) do
+    child = Map.fetch!(curr.children, name)
+    {child, %{curr | children: Map.delete(curr.children, name), size: curr.size - child.size}}
+  end
+
+  def pop_child!(%__MODULE__{dir?: false}, _name) do
+    raise ArgumentError, "File has no children."
+  end
+end
+```
+
+## Zipper
+
+```elixir
+defmodule FSZipper do
+  @moduledoc """
+  Zipper of FSNode tree.
+  """
+
+  @opaque t :: {
+            focus :: FSNode.t(),
+            trail :: [{FSNode.t(), FSNode.filename()}]
+          }
+
+  @spec from_tree(FSNode.t()) :: t
+  def from_tree(tree) do
+    {tree, []}
+  end
+
+  @spec cd(t, FSNode.filename()) :: t
+  def cd({%FSNode{dir?: true} = cwd, [{parent, name} | t]}, "..") do
+    {FSNode.add_child!(parent, name, cwd), t}
+  end
+
+  def cd({%FSNode{dir?: true} = cwd, trail}, name) do
+    {%FSNode{dir?: true} = child, cwd} = FSNode.pop_child!(cwd, name)
+    {child, [{cwd, name} | trail]}
+  end
+
+  @spec add_child(t, FSNode.filename(), FSNode.t()) :: t
+  def add_child({%FSNode{dir?: true} = cwd, trail}, name, %FSNode{} = node) do
+    {FSNode.add_child!(cwd, name, node), trail}
+  end
+
+  @spec to_tree(t) :: FSNode.t()
+  def to_tree({node, []}), do: node
+  def to_tree(zipper), do: zipper |> cd("..") |> to_tree()
+end
+```
+
+## Parser
+
+```elixir
+defmodule FSParser do
+  @spec parse([String.t()]) :: FSNode.t()
+  def parse(lines) do
+    # The sentinel
+    FSNode.dir()
+    # 'Cuz there's no `dir /` in the input,
+    # but there is `$ cd /`,
+    # I just put it there by default.
+    |> FSNode.add_child!("/", FSNode.dir())
+    |> FSZipper.from_tree()
+    |> parse(lines)
+    |> FSZipper.to_tree()
+  end
+
+  @spec parse(FSZipper.t(), [String.t()]) :: FSZipper.t()
+  defp parse(zipper, []), do: zipper
+
+  defp parse(zipper, [line | rest]) do
+    case parse_line(line) do
+      {:dir, name} ->
+        zipper
+        |> FSZipper.add_child(name, FSNode.dir())
+        |> parse(rest)
+
+      {:file, name, size} ->
+        zipper
+        |> FSZipper.add_child(name, FSNode.file(size))
+        |> parse(rest)
+
+      {:cd, dir} ->
+        zipper
+        |> FSZipper.cd(dir)
+        |> parse(rest)
+
+      _ ->
+        parse(zipper, rest)
+    end
+  end
+
+  @spec parse_line(String.t()) ::
+          :ls
+          | {:cd, FSNode.filename()}
+          | {:dir, FSNode.filename()}
+          | {:file, FSNode.filename(), size :: non_neg_integer}
+          | :garbage
+  defp parse_line("$ ls"), do: :ls
+
+  defp parse_line("$ cd " <> dir), do: {:cd, dir}
+
+  defp parse_line("dir " <> name), do: {:dir, name}
+
+  defp parse_line(<<char, _::binary>> = line) when char in ?1..?9 do
+    [size, name] = String.split(line, " ", parts: 2, trim: true)
+    {:file, name, String.to_integer(size)}
+  end
+
+  defp parse_line(_), do: :garbage
+end
+```
+
+## Solution
+
+```elixir
+defmodule Day07 do
+  def part1(input) do
+    input
+    |> FSParser.parse()
+    |> filter1([])
+    |> Enum.map(& &1.size)
+    |> Enum.sum()
+  end
+
+  @total_capacity 70_000_000
+  @target_free_capacity 30_000_000
+
+  def part2(input) do
+    fs = FSParser.parse(input)
+    size_to_free = fs.size - (@total_capacity - @target_free_capacity)
+
+    fs
+    |> filter2(size_to_free, [])
+    |> Enum.map(& &1.size)
+    |> Enum.min()
+  end
+
+  @cap 100_000
+
+  defp filter1(%FSNode{dir?: true, size: size, children: children}, acc) when size > @cap do
+    children
+    |> Map.values()
+    |> Enum.filter(& &1.dir?)
+    |> Enum.reduce(acc, &filter1/2)
+  end
+
+  defp filter1(%FSNode{dir?: true} = node, acc) do
+    node.children
+    |> Map.values()
+    |> Enum.filter(& &1.dir?)
+    |> Enum.reduce([node | acc], &filter1/2)
+  end
+
+  defp filter1(%FSNode{dir?: false}, acc), do: acc
+
+  defp filter2(%FSNode{dir?: false}, _size_to_free, acc), do: acc
+
+  defp filter2(%FSNode{dir?: true, size: size}, size_to_free, acc)
+       when size < size_to_free,
+       do: acc
+
+  defp filter2(%FSNode{dir?: true} = dir, size_to_free, acc) do
+    case Enum.filter(Map.values(dir.children), &(&1.size >= size_to_free)) do
+      [] -> [dir | acc]
+      children -> Enum.reduce(children, acc, &filter2(&1, size_to_free, &2))
+    end
+  end
+end
+```
+
+```elixir
+input =
+  "#{__DIR__}/day07.txt"
+  |> File.stream!()
+  |> Enum.map(&String.trim/1)
+```
+
+```elixir
+Day07.part1(input)
+```
+
+```elixir
+Day07.part2(input)
+```

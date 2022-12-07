@@ -1,0 +1,109 @@
+# Day 05
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.7.0"}
+])
+```
+
+## Section
+
+```elixir
+defmodule Day05 do
+  def part1(input_path) do
+    {stacks, instructions} = parse_input(input_path)
+
+    instructions
+    |> Enum.reduce(stacks, fn instruction, stacks ->
+      move1(stacks, instruction.from, instruction.to, instruction.amount)
+    end)
+    |> Enum.sort()
+    |> Enum.map(&elem(&1, 1))
+    |> Enum.map(&hd/1)
+  end
+
+  def part2(input_path) do
+    {stacks, instructions} = parse_input(input_path)
+
+    instructions
+    |> Enum.reduce(stacks, fn instruction, stacks ->
+      move2(stacks, instruction.from, instruction.to, instruction.amount)
+    end)
+    |> Enum.sort()
+    |> Enum.map(&elem(&1, 1))
+    |> Enum.map(&hd/1)
+  end
+
+  defp parse_input(input_path) do
+    [stacks_part, instructions_part] =
+      input_path
+      |> File.read!()
+      |> String.split("\n\n", parts: 2, trim: true)
+
+    {build_stacks(stacks_part), build_instructions(instructions_part)}
+  end
+
+  defp build_stacks(stacks_part) do
+    stacks_part
+    |> String.split("\n", trim: true)
+    |> Enum.reverse()
+    |> tl()
+    |> Enum.map(&to_layer(&1, []))
+    |> Enum.reduce(%{}, &push_layer/2)
+  end
+
+  defp to_layer("", acc), do: Enum.reverse(acc)
+  defp to_layer("    " <> rest, acc), do: to_layer(rest, [?_ | acc])
+  defp to_layer("   " <> rest, acc), do: to_layer(rest, [?_ | acc])
+  defp to_layer(<<?[, char, ?], ?\s, rest::binary>>, acc), do: to_layer(rest, [char | acc])
+  defp to_layer(<<?[, char, ?], rest::binary>>, acc), do: to_layer(rest, [char | acc])
+
+  defp push_layer(layer, stacks) do
+    layer
+    |> Enum.with_index(1)
+    |> Enum.reduce(stacks, fn
+      {?_, _}, stacks -> stacks
+      {char, i}, stacks -> Map.update(stacks, i, [char], &[char | &1])
+    end)
+  end
+
+  defp build_instructions(instructions_part) do
+    ~r/\d+/m
+    |> Regex.scan(instructions_part)
+    |> List.flatten()
+    |> Enum.map(&String.to_integer/1)
+    |> Enum.chunk_every(3)
+    |> Enum.map(fn [amount, from, to] ->
+      %{amount: amount, from: from, to: to}
+    end)
+  end
+
+  defp move1(stacks, from, to, amount) do
+    {from_stack, to_stack} =
+      for _ <- 1..amount, reduce: {stacks[from], stacks[to]} do
+        {[h | t], to_stack} -> {t, [h | to_stack]}
+      end
+
+    %{stacks | from => from_stack, to => to_stack}
+  end
+
+  defp move2(stacks, from, to, amount) do
+    {to_move, from_stack} = Enum.split(stacks[from], amount)
+    to_stack = to_move ++ stacks[to]
+
+    %{stacks | from => from_stack, to => to_stack}
+  end
+end
+```
+
+```elixir
+input_file = "#{__DIR__}/day05.txt"
+```
+
+```elixir
+Day05.part1(input_file)
+```
+
+```elixir
+Day05.part2(input_file)
+```
