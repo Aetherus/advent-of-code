@@ -229,9 +229,45 @@ input =
 ```
 
 ```elixir
-Day07.part1(input)
+:timer.tc(fn -> Day07.part1(input) end)
 ```
 
 ```elixir
 Day07.part2(input)
+```
+
+## Single-stack solution (part 1 only)
+
+```elixir
+defmodule Day07v2 do
+  @spec part1([String.t()]) :: non_neg_integer
+  def part1(input) do
+    solve(input, 0, [])
+  end
+
+  defp solve([], res, _stack), do: res
+
+  defp solve(["$ cd .." | rest], res, [h1, h2 | t]) do
+    if h1 <= 100_000 do
+      solve(rest, res + h1, [h1 + h2 | t])
+    else
+      solve(rest, res, [h1 + h2 | t])
+    end
+  end
+
+  defp solve(["$ cd " <> _ | rest], res, stack) do
+    solve(rest, res, [0 | stack])
+  end
+
+  defp solve([<<char, _::binary>> = line | rest], res, [h | t]) when char in ?1..?9 do
+    [size, _] = String.split(line, " ", parts: 2, trim: true)
+    solve(rest, res, [h + String.to_integer(size) | t])
+  end
+
+  defp solve([_ | rest], res, stack), do: solve(rest, res, stack)
+end
+```
+
+```elixir
+:timer.tc(fn -> Day07v2.part1(input) end)
 ```

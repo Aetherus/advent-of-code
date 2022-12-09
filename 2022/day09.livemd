@@ -1,0 +1,67 @@
+# Day 09
+
+## Section
+
+```elixir
+defmodule Day09 do
+  def part1(input) do
+    input
+    |> Enum.reduce({{0, 0}, [{0, 0}]}, fn instruction, {coord_h, ts} ->
+      move(instruction, coord_h, ts)
+    end)
+    |> elem(1)
+    |> Enum.uniq()
+    |> length()
+  end
+
+  defp move({_, 0}, coord_h, ts), do: {coord_h, ts}
+
+  defp move({"L", dist}, {xh, yh}, ts) do
+    coord_h = {xh - 1, yh}
+    ts = follow(ts, coord_h)
+    move({"L", dist - 1}, coord_h, ts)
+  end
+
+  defp move({"R", dist}, {xh, yh}, ts) do
+    coord_h = {xh + 1, yh}
+    ts = follow(ts, coord_h)
+    move({"R", dist - 1}, coord_h, ts)
+  end
+
+  defp move({"U", dist}, {xh, yh}, ts) do
+    coord_h = {xh, yh + 1}
+    ts = follow(ts, coord_h)
+    move({"U", dist - 1}, coord_h, ts)
+  end
+
+  defp move({"D", dist}, {xh, yh}, ts) do
+    coord_h = {xh, yh - 1}
+    ts = follow(ts, coord_h)
+    move({"D", dist - 1}, coord_h, ts)
+  end
+
+  defp follow([{xt, yt} | _] = ts, {xh, yh}) when abs(xh - xt) <= 1 and abs(yh - yt) <= 1 do
+    [{xt, yt} | ts]
+  end
+
+  defp follow([{xt, yt} | _] = ts, {xh, yh}) do
+    [{xt + sign(xh - xt), yt + sign(yh - yt)} | ts]
+  end
+
+  defp sign(0), do: 0
+  defp sign(n), do: n |> abs() |> div(n)
+end
+```
+
+```elixir
+input =
+  "#{__DIR__}/day09.txt"
+  |> File.stream!()
+  |> Stream.map(&String.trim/1)
+  |> Stream.map(&String.split/1)
+  |> Stream.map(fn [direction, distance] -> {direction, String.to_integer(distance)} end)
+```
+
+```elixir
+Day09.part1(input)
+```

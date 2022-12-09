@@ -1,0 +1,150 @@
+# Day 08
+
+## Section
+
+```elixir
+defmodule Day08 do
+  # input is %{{i, j} => val}
+  def part1(input) do
+    {w, h} = shape(input)
+
+    set = MapSet.new()
+
+    set =
+      for i <- 0..w, reduce: set do
+        set ->
+          set =
+            for j <- 0..h, reduce: {set, -1} do
+              {set, tallest} ->
+                tree = input[{i, j}]
+
+                if tree > tallest do
+                  {MapSet.put(set, {i, j}), tree}
+                else
+                  {set, tallest}
+                end
+            end
+            |> elem(0)
+
+          for j <- h..0//-1, reduce: {set, -1} do
+            {set, tallest} ->
+              tree = input[{i, j}]
+
+              if tree > tallest do
+                {MapSet.put(set, {i, j}), tree}
+              else
+                {set, tallest}
+              end
+          end
+          |> elem(0)
+      end
+
+    set =
+      for j <- 0..h, reduce: set do
+        set ->
+          set =
+            for i <- 0..w, reduce: {set, -1} do
+              {set, tallest} ->
+                tree = input[{i, j}]
+
+                if tree > tallest do
+                  {MapSet.put(set, {i, j}), tree}
+                else
+                  {set, tallest}
+                end
+            end
+            |> elem(0)
+
+          for i <- w..0//-1, reduce: {set, -1} do
+            {set, tallest} ->
+              tree = input[{i, j}]
+
+              if tree > tallest do
+                {MapSet.put(set, {i, j}), tree}
+              else
+                {set, tallest}
+              end
+          end
+          |> elem(0)
+      end
+
+    MapSet.size(set)
+  end
+
+  def part2(input) do
+    {h, w} = shape = shape(input)
+
+    for i <- 1..(h - 1), j <- 1..(w - 1) do
+      visibility(input, shape, i, j)
+    end
+    |> Enum.max()
+  end
+
+  defp visibility(input, {h, w}, i, j) do
+    curr = input[{i, j}]
+
+    up =
+      (i - 1)..0//-1
+      |> Enum.find(fn ii ->
+        input[{ii, j}] >= curr
+      end)
+      |> Kernel.||(0)
+      |> then(&(i - &1))
+
+    down =
+      (i + 1)..h//1
+      |> Enum.find(fn ii ->
+        input[{ii, j}] >= curr
+      end)
+      |> Kernel.||(h)
+      |> then(&(&1 - i))
+
+    left =
+      (j - 1)..0//-1
+      |> Enum.find(fn jj ->
+        input[{i, jj}] >= curr
+      end)
+      |> Kernel.||(0)
+      |> then(&(j - &1))
+
+    right =
+      (j + 1)..w//1
+      |> Enum.find(fn jj ->
+        input[{i, jj}] >= curr
+      end)
+      |> Kernel.||(w)
+      |> then(&(&1 - j))
+
+    up * down * left * right
+  end
+
+  defp shape(input) do
+    input
+    |> Enum.max()
+    |> elem(0)
+  end
+end
+```
+
+```elixir
+input_path = "#{__DIR__}/day08.txt"
+
+input =
+  File.read!(input_path)
+  |> String.split("\n", trim: true, global: true)
+  |> Enum.map(&String.split(&1, "", trim: true))
+
+input =
+  for {row, i} <- Enum.with_index(input),
+      {col, j} <- Enum.with_index(row),
+      into: %{},
+      do: {{i, j}, String.to_integer(col)}
+```
+
+```elixir
+Day08.part1(input)
+```
+
+```elixir
+Day08.part2(input)
+```
