@@ -1,0 +1,164 @@
+# Day 11
+
+```elixir
+Mix.install([
+  {:yaml_elixir, "~> 2.9"}
+])
+```
+
+## Section
+
+```elixir
+defmodule Day11 do
+  def part1(input) do
+    for _ <- 1..20, reduce: {input, %{}} do
+      {state, acc} -> play1(0, state, acc)
+    end
+    |> elem(1)
+    |> Map.values()
+    |> Enum.sort(:desc)
+    |> Enum.take(2)
+    |> Enum.reduce(&*/2)
+  end
+
+  def part2(input) do
+    modulo =
+      input
+      |> Map.values()
+      |> Enum.map(& &1.divisor)
+      |> Enum.reduce(&lcm/2)
+
+    for _ <- 1..10_000, reduce: {input, %{}} do
+      {state, acc} -> play2(modulo, 0, state, acc)
+    end
+    |> elem(1)
+    |> Map.values()
+    |> Enum.sort(:desc)
+    |> Enum.take(2)
+    |> Enum.reduce(&*/2)
+  end
+
+  defp play1(i, state, acc) do
+    case state[i] do
+      nil ->
+        {state, acc}
+
+      monkey ->
+        items_count = length(monkey.items)
+
+        state =
+          for item <- Enum.reverse(monkey.items), reduce: state do
+            state ->
+              worry =
+                item
+                |> monkey.op.()
+                |> div(3)
+
+              worry
+              |> monkey.test.()
+              |> then(&monkey[&1])
+              |> then(&update_in(state, [&1, :items], fn possession -> [worry | possession] end))
+          end
+          |> put_in([i, :items], [])
+
+        play1(i + 1, state, Map.update(acc, i, items_count, &(&1 + items_count)))
+    end
+  end
+
+  defp play2(modulo, i, state, acc) do
+    case state[i] do
+      nil ->
+        {state, acc}
+
+      monkey ->
+        items_count = length(monkey.items)
+
+        state =
+          for item <- Enum.reverse(monkey.items), reduce: state do
+            state ->
+              worry =
+                item
+                |> monkey.op.()
+                |> rem(modulo)
+
+              worry
+              |> monkey.test.()
+              |> then(&monkey[&1])
+              |> then(&update_in(state, [&1, :items], fn possession -> [worry | possession] end))
+          end
+          |> put_in([i, :items], [])
+
+        play2(modulo, i + 1, state, Map.update(acc, i, items_count, &(&1 + items_count)))
+    end
+  end
+
+  def parse(input) do
+    input
+    |> String.replace("  If", "If", global: true)
+    |> YamlElixir.read_all_from_string!()
+    |> hd()
+    |> Map.new(fn {"Monkey " <> i, v} ->
+      "divisible by " <> divisor = v["Test"]
+      divisor = String.to_integer(divisor)
+      "throw to monkey " <> j = v["If true"]
+      "throw to monkey " <> k = v["If false"]
+      j = String.to_integer(j)
+      k = String.to_integer(k)
+
+      items =
+        case v["Starting items"] do
+          nil ->
+            []
+
+          n when is_integer(n) ->
+            [n]
+
+          s ->
+            s
+            |> String.split(~r/\D+/, trim: true)
+            |> Enum.map(&String.to_integer/1)
+            |> Enum.reverse()
+        end
+
+      {
+        String.to_integer(i),
+        %{
+          items: items,
+          op: parse_op(v["Operation"]),
+          test: &(rem(&1, divisor) == 0),
+          divisor: divisor,
+          true: j,
+          false: k
+        }
+      }
+    end)
+  end
+
+  defp parse_op("new = " <> body) do
+    Code.eval_string("fn old -> #{body} end") |> elem(0)
+  end
+
+  defp gcd(a, b) when a < b, do: gcd(b, a)
+
+  defp gcd(a, b) do
+    case rem(a, b) do
+      0 -> b
+      r -> gcd(b, r)
+    end
+  end
+
+  defp lcm(a, b), do: div(a * b, gcd(a, b))
+end
+```
+
+```elixir
+input = Day11.parse(File.read!("#{__DIR__}/day11.txt"))
+```
+
+```elixir
+Day11.part1(input)
+```
+
+```elixir
+Day11.part2(input)
+```
