@@ -6,46 +6,48 @@
 defmodule Day09 do
   def part1(input) do
     input
-    |> Enum.reduce({{0, 0}, [{0, 0}]}, fn instruction, {coord_h, ts} ->
-      move(instruction, coord_h, ts)
+    |> Enum.reduce({List.duplicate({0, 0}, 2), [{0, 0}]}, fn instruction, {knots, acc} ->
+      move(instruction, knots, acc)
     end)
     |> elem(1)
     |> Enum.uniq()
     |> length()
   end
 
-  defp move({_, 0}, coord_h, ts), do: {coord_h, ts}
-
-  defp move({"L", dist}, {xh, yh}, ts) do
-    coord_h = {xh - 1, yh}
-    ts = follow(ts, coord_h)
-    move({"L", dist - 1}, coord_h, ts)
+  def part2(input) do
+    input
+    |> Enum.reduce({List.duplicate({0, 0}, 10), [{0, 0}]}, fn instruction, {knots, acc} ->
+      move(instruction, knots, acc)
+    end)
+    |> elem(1)
+    |> Enum.uniq()
+    |> length()
   end
 
-  defp move({"R", dist}, {xh, yh}, ts) do
-    coord_h = {xh + 1, yh}
-    ts = follow(ts, coord_h)
-    move({"R", dist - 1}, coord_h, ts)
+  defp move({_, 0}, rope, acc), do: {rope, acc}
+
+  defp move({direction, dist}, [h | t], acc) do
+    h = move_once(h, direction)
+
+    rev_rope =
+      for knot <- t, reduce: [h] do
+        [prev | _] = state -> [follow(knot, prev) | state]
+      end
+
+    move({direction, dist - 1}, Enum.reverse(rev_rope), [hd(rev_rope) | acc])
   end
 
-  defp move({"U", dist}, {xh, yh}, ts) do
-    coord_h = {xh, yh + 1}
-    ts = follow(ts, coord_h)
-    move({"U", dist - 1}, coord_h, ts)
+  defp move_once({x, y}, "U"), do: {x, y + 1}
+  defp move_once({x, y}, "D"), do: {x, y - 1}
+  defp move_once({x, y}, "L"), do: {x - 1, y}
+  defp move_once({x, y}, "R"), do: {x + 1, y}
+
+  defp follow({xt, yt}, {xh, yh}) when abs(xt - xh) <= 1 and abs(yt - yh) <= 1 do
+    {xt, yt}
   end
 
-  defp move({"D", dist}, {xh, yh}, ts) do
-    coord_h = {xh, yh - 1}
-    ts = follow(ts, coord_h)
-    move({"D", dist - 1}, coord_h, ts)
-  end
-
-  defp follow([{xt, yt} | _] = ts, {xh, yh}) when abs(xh - xt) <= 1 and abs(yh - yt) <= 1 do
-    [{xt, yt} | ts]
-  end
-
-  defp follow([{xt, yt} | _] = ts, {xh, yh}) do
-    [{xt + sign(xh - xt), yt + sign(yh - yt)} | ts]
+  defp follow({xt, yt}, {xh, yh}) do
+    {xt - sign(xt - xh), yt - sign(yt - yh)}
   end
 
   defp sign(0), do: 0
@@ -64,4 +66,8 @@ input =
 
 ```elixir
 Day09.part1(input)
+```
+
+```elixir
+Day09.part2(input)
 ```
