@@ -1,0 +1,90 @@
+# Day 12
+
+```elixir
+Mix.install([
+  {:libgraph, "~> 0.16.0"}
+])
+```
+
+## Section
+
+```elixir
+defmodule Day12 do
+  def part1({graph, src, dst, _}) do
+    Graph.a_star(graph, src, dst, &manhattan(&1, dst)) |> length() |> Kernel.-(1)
+  end
+
+  def part2({graph, _, dst, srcs}) do
+    srcs
+    |> Enum.map(fn x -> Graph.a_star(graph, x, dst, &manhattan(&1, dst)) end)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.map(&length/1)
+    |> Enum.min()
+    |> Kernel.-(1)
+  end
+
+  defp manhattan({x1, y1}, {x2, y2}) do
+    abs(x1 - x2) + abs(y1 - y2)
+  end
+
+  def parse_input(path) do
+    grid =
+      path
+      |> File.stream!()
+      |> Stream.map(&String.trim/1)
+      |> Enum.map(&String.to_charlist/1)
+
+    grid =
+      for {row, i} <- Enum.with_index(grid),
+          {col, j} <- Enum.with_index(row),
+          into: %{},
+          do: {{i, j}, col}
+
+    graph =
+      for {{i, j} = cf, from} <- grid,
+          ct <- [{i - 1, j}, {i + 1, j}, {i, j - 1}, {i, j + 1}],
+          to = grid[ct],
+          grid[ct] != nil,
+          reduce: Graph.new(type: :directed) do
+        g ->
+          case {from, to} do
+            {?S, to} when to in 'ab' ->
+              Graph.add_edge(g, cf, ct)
+
+            {?S, _} ->
+              g
+
+            {from, ?E} when from in 'yz' ->
+              Graph.add_edge(g, cf, ct)
+
+            {_, ?E} ->
+              g
+
+            {from, to} when to - from <= 1 ->
+              Graph.add_edge(g, cf, ct)
+
+            _ ->
+              g
+          end
+      end
+
+    src = Enum.find(grid, fn {_, v} -> v == ?S end) |> elem(0)
+    dst = Enum.find(grid, fn {_, v} -> v == ?E end) |> elem(0)
+    srcs = Enum.filter(grid, fn {_, v} -> v in 'Sa' end) |> Enum.map(&elem(&1, 0))
+
+    {graph, src, dst, srcs}
+  end
+end
+```
+
+```elixir
+input = "#{__DIR__}/day12.txt" |> Day12.parse_input()
+```
+
+```elixir
+Day12.part1(input)
+```
+
+```elixir
+Day12.part2(input)
+```
