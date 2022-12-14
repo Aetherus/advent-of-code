@@ -30,7 +30,12 @@ defmodule Day10 do
       chunk
       |> Enum.map(fn cycle ->
         pos = rem(cycle, 40) - 1
-        if abs(pos - input[cycle]) <= 1, do: ?%, else: ?\s
+
+        if abs(pos - input[cycle]) <= 1 do
+          IO.ANSI.format([:blue_background, :blue, "%"], true)
+        else
+          IO.ANSI.format([:red_background, :red, " "], true)
+        end
       end)
       |> IO.puts()
     end)
@@ -56,10 +61,6 @@ end
 
 ```elixir
 input = Day10.parse_input("#{__DIR__}/day10.txt")
-```
-
-```elixir
-Enum.min_by(input, &elem(&1, 1))
 ```
 
 ```elixir
