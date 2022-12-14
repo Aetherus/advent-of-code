@@ -10,10 +10,10 @@ defmodule Day14 do
   end
 
   def part2(input) do
-    bottom = Enum.max_by(input, &elem(&1, 1)) |> elem(1)
-    state = (-bottom - 3)..(bottom + 3) |> Stream.map(&{500 + &1, bottom + 2}) |> Enum.into(input)
+    bottom = Enum.max_by(input, &elem(&1, 1)) |> elem(1) |> Kernel.+(2)
+    state = (-bottom - 1)..(bottom + 1) |> Stream.map(&{500 + &1, bottom}) |> Enum.into(input)
 
-    Stream.unfold(state, &fall(&1, bottom + 2, {500, 0})) |> Enum.count()
+    Stream.unfold(state, &fall(&1, bottom, {500, 0})) |> Enum.count()
   end
 
   defp fall(state, bottom, {x, y} = sand) do
