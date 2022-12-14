@@ -14,7 +14,7 @@ defmodule Day06 do
 
   defp solve(input_path, chunk_size) do
     input_path
-    |> File.open!([:read, :charlist], &IO.read(&1, :eof))
+    |> File.stream!([], 1)
     |> Stream.chunk_every(chunk_size, 1, :discard)
     |> Stream.map(&IO.inspect(&1, label: "CHUNK"))
     |> Stream.map(&Enum.uniq/1)
