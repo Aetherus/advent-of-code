@@ -16,8 +16,11 @@ defmodule Day06 do
     input_path
     |> File.open!([:read, :charlist], &IO.read(&1, :eof))
     |> Stream.chunk_every(chunk_size, 1, :discard)
+    |> Stream.map(&IO.inspect(&1, label: "CHUNK"))
     |> Stream.map(&Enum.uniq/1)
+    |> Stream.map(&IO.inspect(&1, label: "UNIQ"))
     |> Stream.map(&length/1)
+    |> Stream.map(&IO.inspect(&1, label: "LENGTH"))
     |> Enum.find_index(&(&1 == chunk_size))
     |> Kernel.+(chunk_size)
   end
