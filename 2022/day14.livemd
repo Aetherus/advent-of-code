@@ -1,0 +1,63 @@
+# Day 14
+
+## Section
+
+```elixir
+defmodule Day14 do
+  def part1(input) do
+    bottom = Enum.max_by(input, &elem(&1, 1)) |> elem(1)
+    Stream.unfold(input, &fall(&1, bottom, {500, 0})) |> Enum.count()
+  end
+
+  def part2(input) do
+    bottom = Enum.max_by(input, &elem(&1, 1)) |> elem(1)
+    state = (-bottom - 3)..(bottom + 3) |> Stream.map(&{500 + &1, bottom + 2}) |> Enum.into(input)
+
+    Stream.unfold(state, &fall(&1, bottom + 2, {500, 0})) |> Enum.count()
+  end
+
+  defp fall(state, bottom, {x, y} = sand) do
+    if MapSet.member?(state, {500, 0}) do
+      nil
+    else
+      air = Enum.find([{x, y + 1}, {x - 1, y + 1}, {x + 1, y + 1}], &(!MapSet.member?(state, &1)))
+
+      case air do
+        nil -> {state, MapSet.put(state, sand)}
+        {_, y} when y > bottom -> nil
+        _ -> fall(state, bottom, air)
+      end
+    end
+  end
+
+  def parse_input(path) do
+    path
+    |> File.stream!()
+    |> Stream.flat_map(&parse_line/1)
+    |> MapSet.new()
+  end
+
+  defp parse_line(line) do
+    line
+    |> String.split(~r/\D+/, trim: true)
+    |> Stream.map(&String.to_integer/1)
+    |> Stream.chunk_every(2)
+    |> Stream.chunk_every(2, 1, :discard)
+    |> Stream.flat_map(fn [[a, b], [c, d]] ->
+      for x <- a..c, y <- b..d, do: {x, y}
+    end)
+  end
+end
+```
+
+```elixir
+input = Day14.parse_input("#{__DIR__}/day14.txt")
+```
+
+```elixir
+Day14.part1(input)
+```
+
+```elixir
+Day14.part2(input)
+```
