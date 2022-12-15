@@ -1,29 +1,51 @@
 # Day 14
 
+```elixir
+Mix.install([
+  {:kino_vega_lite, "~> 0.1.7"}
+])
+
+alias VegaLite, as: Vl
+```
+
 ## Section
 
 ```elixir
 defmodule Day14 do
   def part1(input) do
-    bottom = Enum.max_by(input, &elem(&1, 1)) |> elem(1)
-    Stream.unfold(input, &fall(&1, bottom, {500, 0})) |> Enum.count()
+    bottom = input |> Map.keys() |> Enum.max_by(&elem(&1, 1)) |> elem(1)
+
+    input
+    |> Stream.unfold(&fall(&1, bottom, {500, 0}))
+    |> Enum.reduce({nil, 0}, fn state, {_, count} ->
+      {state, count + 1}
+    end)
   end
 
   def part2(input) do
-    bottom = Enum.max_by(input, &elem(&1, 1)) |> elem(1) |> Kernel.+(2)
-    state = (-bottom - 1)..(bottom + 1) |> Stream.map(&{500 + &1, bottom}) |> Enum.into(input)
+    bottom = input |> Map.keys() |> Enum.max_by(&elem(&1, 1)) |> elem(1) |> Kernel.+(2)
 
-    Stream.unfold(state, &fall(&1, bottom, {500, 0})) |> Enum.count()
+    state =
+      (-bottom - 1)..(bottom + 1)
+      |> Stream.map(&{500 + &1, bottom})
+      |> Stream.map(&{&1, :Rock})
+      |> Enum.into(input)
+
+    state
+    |> Stream.unfold(&fall(&1, bottom, {500, 0}))
+    |> Enum.reduce({nil, 0}, fn state, {_, count} ->
+      {state, count + 1}
+    end)
   end
 
   defp fall(state, bottom, {x, y} = sand) do
-    if MapSet.member?(state, {500, 0}) do
+    if state[{500, 0}] do
       nil
     else
-      air = Enum.find([{x, y + 1}, {x - 1, y + 1}, {x + 1, y + 1}], &(!MapSet.member?(state, &1)))
+      air = Enum.find([{x, y + 1}, {x - 1, y + 1}, {x + 1, y + 1}], &(!state[&1]))
 
       case air do
-        nil -> {state, MapSet.put(state, sand)}
+        nil -> {state, Map.put(state, sand, :Sand)}
         {_, y} when y > bottom -> nil
         _ -> fall(state, bottom, air)
       end
@@ -34,7 +56,7 @@ defmodule Day14 do
     path
     |> File.stream!()
     |> Stream.flat_map(&parse_line/1)
-    |> MapSet.new()
+    |> Map.new(fn coord -> {coord, :Rock} end)
   end
 
   defp parse_line(line) do
@@ -47,6 +69,15 @@ defmodule Day14 do
       for x <- a..c, y <- b..d, do: {x, y}
     end)
   end
+
+  def visualize(state, opts \\ []) do
+    Vl.new(opts)
+    |> Vl.data_from_values(for {{x, y}, type} <- state, do: %{"x" => x, "y" => y, "type" => type})
+    |> Vl.mark(:rect, tooltip: true)
+    |> Vl.encode_field(:x, "x", axis: nil)
+    |> Vl.encode_field(:y, "y", axis: nil)
+    |> Vl.encode(:color, field: "type", type: :nominal)
+  end
 end
 ```
 
@@ -55,9 +86,25 @@ input = Day14.parse_input("#{__DIR__}/day14.txt")
 ```
 
 ```elixir
-Day14.part1(input)
+{state, count} = Day14.part1(input)
 ```
 
 ```elixir
-Day14.part2(input)
+count
+```
+
+```elixir
+Day14.visualize(state, width: 500, height: 1000)
+```
+
+```elixir
+{state, count} = Day14.part2(input)
+```
+
+```elixir
+count
+```
+
+```elixir
+Day14.visualize(state, width: 600, height: 400)
 ```
