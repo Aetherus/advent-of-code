@@ -97,8 +97,6 @@ defmodule Day15 do
         p = {x, y},
         !Enum.any?(sensors, &cover?(&1, p)),
         {x, y} = mul(@inv_m, p),
-        x in 0..4_000_000,
-        y in 0..4_000_000,
         do: x * 4_000_000 + y
   end
 
