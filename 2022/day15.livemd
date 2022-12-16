@@ -92,10 +92,10 @@ defmodule Day15 do
 
     for [x1, x2] <- x_pairs,
         [y1, y2] <- y_pairs,
-        x = (x1 + x2) / 2,
-        y = (y1 + y2) / 2,
+        x = div(x1 + x2, 2),
+        y = div(y1 + y2, 2),
         p = {x, y},
-        Enum.all?(sensors, &(not inside?(p, &1))),
+        !Enum.any?(sensors, &inside?(p, &1)),
         {x, y} = mul(@inv_m, p),
         x in 0..4_000_000,
         y in 0..4_000_000,
