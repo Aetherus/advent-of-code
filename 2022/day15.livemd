@@ -65,7 +65,7 @@ defmodule Day15 do
         {
           # left corner --> bottom-left corner
           mul(@m, {xc - r, yc}),
-          # right corner --> to-right corner
+          # right corner --> top-right corner
           mul(@m, {xc + r, yc})
         }
       end)
