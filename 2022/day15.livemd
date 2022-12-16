@@ -39,7 +39,84 @@ defmodule Day15 do
     # This statement is an assertion
     2 = x2 - x1
 
+    IO.inspect({div(x1 + x2, 2), y})
+
     div(x1 + x2, 2) * 4_000_000 + y
+  end
+
+  # matrix for turning left 45 degrees 
+  # and stretch by the factor sqrt(2)
+  @m {
+    {1, -1},
+    {1, 1}
+  }
+
+  # inverse of @m
+  @inv_m {
+    {0.5, 0.5},
+    {-0.5, 0.5}
+  }
+
+  def part2_v2(input) do
+    sensors =
+      input
+      |> Enum.filter(&match?({_, {:sensor, _}}, &1))
+      |> Enum.map(fn {{xc, yc}, {:sensor, r}} ->
+        {
+          # left corner --> bottom-left corner
+          mul(@m, {xc - r, yc}),
+          # right corner --> to-right corner
+          mul(@m, {xc + r, yc})
+        }
+      end)
+
+    x_pairs =
+      sensors
+      |> Enum.flat_map(fn {{x1, _}, {x2, _}} ->
+        [x1, x2]
+      end)
+      |> Enum.uniq()
+      |> Enum.sort()
+      |> Enum.chunk_every(2, 1, :discard)
+      |> Enum.filter(fn [x1, x2] -> x2 - x1 == 2 end)
+
+    y_pairs =
+      sensors
+      |> Enum.flat_map(fn {{_, y1}, {_, y2}} ->
+        [y1, y2]
+      end)
+      |> Enum.uniq()
+      |> Enum.sort()
+      |> Enum.chunk_every(2, 1, :discard)
+      |> Enum.filter(fn [y1, y2] -> y2 - y1 == 2 end)
+
+    for [x1, x2] <- x_pairs,
+        [y1, y2] <- y_pairs,
+        x = (x1 + x2) / 2,
+        y = (y1 + y2) / 2,
+        p = {x, y},
+        Enum.all?(sensors, &(not inside?(p, &1))),
+        {x, y} = mul(@inv_m, p),
+        x in 0..4_000_000,
+        y in 0..4_000_000,
+        do: x * 4_000_000 + y
+  end
+
+  defp inside?({x, y}, {{x1, y1}, {x2, y2}}) do
+    x in x1..x2 and y in y1..y2
+  end
+
+  defp mul(
+         {
+           {a, b},
+           {c, d}
+         },
+         {x, y}
+       ) do
+    {
+      trunc(a * x + b * y),
+      trunc(c * x + d * y)
+    }
   end
 
   defp ranges_at_y(sensors, y) do
@@ -58,12 +135,12 @@ defmodule Day15 do
     do_merge_ranges(t, [h])
   end
 
-  defp do_merge_ranges([s2..e2 = r2 | t2], [s1..e1 = r1 | t1] = acc) do
-    if Range.disjoint?(r1, r2) do
-      do_merge_ranges(t2, [r2 | acc])
-    else
-      do_merge_ranges(t2, [s1..max(e1, e2) | t1])
-    end
+  defp do_merge_ranges([s2..e2 | t2], [s1..e1 | t1]) when s2 <= e1 + 1 do
+    do_merge_ranges(t2, [s1..max(e1, e2) | t1])
+  end
+
+  defp do_merge_ranges([range2 | t2], acc) do
+    do_merge_ranges(t2, [range2 | acc])
   end
 
   defp do_merge_ranges([], acc), do: acc
@@ -97,6 +174,10 @@ input = Day15.parse_input("#{__DIR__}/day15.txt")
 
 ```elixir
 Day15.part1(input)
+```
+
+```elixir
+Day15.part2_v2(input)
 ```
 
 ```elixir
