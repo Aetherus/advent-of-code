@@ -95,14 +95,14 @@ defmodule Day15 do
         x = div(x1 + x2, 2),
         y = div(y1 + y2, 2),
         p = {x, y},
-        !Enum.any?(sensors, &inside?(p, &1)),
+        !Enum.any?(sensors, &cover?(&1, p)),
         {x, y} = mul(@inv_m, p),
         x in 0..4_000_000,
         y in 0..4_000_000,
         do: x * 4_000_000 + y
   end
 
-  defp inside?({x, y}, {{x1, y1}, {x2, y2}}) do
+  defp cover?({{x1, y1}, {x2, y2}}, {x, y}) do
     x in x1..x2 and y in y1..y2
   end
 
