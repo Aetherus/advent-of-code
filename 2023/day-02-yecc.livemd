@@ -1,0 +1,163 @@
+# Advent of Code 2023 Day 2 (with yecc)
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.5"}
+])
+```
+
+## Prep
+
+<!-- livebook:{"attrs":{"assign_to":"puzzle_input","day":"2","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "2", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+defmodule AoC2023.Day2.Lexer do
+  def tokenize(input) do
+    do_tokenize(input, [])
+  end
+
+  defp do_tokenize("", acc) do
+    Enum.reverse([{:"$end", []} | acc])
+  end
+
+  defp do_tokenize("Game" <> rest, acc) do
+    do_tokenize(rest, [{:game, []} | acc])
+  end
+
+  defp do_tokenize("red" <> rest, acc) do
+    do_tokenize(rest, [{:red, []} | acc])
+  end
+
+  defp do_tokenize("green" <> rest, acc) do
+    do_tokenize(rest, [{:green, []} | acc])
+  end
+
+  defp do_tokenize("blue" <> rest, acc) do
+    do_tokenize(rest, [{:blue, []} | acc])
+  end
+
+  defp do_tokenize("," <> rest, acc) do
+    do_tokenize(rest, [{:",", []} | acc])
+  end
+
+  defp do_tokenize(";" <> rest, acc) do
+    do_tokenize(rest, [{:";", []} | acc])
+  end
+
+  defp do_tokenize(":" <> rest, acc) do
+    do_tokenize(rest, [{:":", []} | acc])
+  end
+
+  defp do_tokenize(<<char, rest::binary>>, [{:num, _, num} | acc])
+       when char in ?0..?9 do
+    do_tokenize(rest, [{:num, [], num * 10 + char - ?0} | acc])
+  end
+
+  defp do_tokenize(<<char, rest::binary>>, acc)
+       when char in ?0..?9 do
+    do_tokenize(rest, [{:num, [], char - ?0} | acc])
+  end
+
+  defp do_tokenize(<<_, rest::binary>>, acc) do
+    do_tokenize(rest, acc)
+  end
+end
+```
+
+```elixir
+rules = """
+Terminals  game  num  red  green  blue  ':'  ','  ';'.
+
+Nonterminals  color  games  one_game  set  sets.
+
+Rootsymbol  games.
+
+color -> num red : {red, element(3, '$1')}.
+color -> num green : {green, element(3, '$1')}.
+color -> num blue : {blue, element(3, '$1')}.
+
+set -> color : ['$1'].
+set -> color ',' set : ['$1' | '$3'].
+
+sets -> set : ['$1'].
+sets -> set ';' sets : ['$1' | '$3'].
+
+one_game -> game num ':' sets : {element(3, '$2'), '$4'}.
+
+games -> one_game : ['$1'].
+games -> one_game games : ['$1' | '$2'].
+"""
+```
+
+```elixir
+path = "/tmp/aoc2023_day02_parser.yrl"
+```
+
+```elixir
+File.write!(path, rules)
+```
+
+```elixir
+{:ok, parser_path} = :yecc.file(String.to_charlist(path))
+```
+
+```elixir
+:compile.file(parser_path)
+```
+
+```elixir
+tokens = AoC2023.Day2.Lexer.tokenize(puzzle_input)
+```
+
+```elixir
+{:ok, games} = :aoc2023_day02_parser.parse(tokens)
+```
+
+## Part 1
+
+```elixir
+games
+|> Stream.filter(fn {_id, sets} ->
+  Enum.all?(sets, fn set ->
+    Keyword.get(set, :red, 0) <= 12 and
+      Keyword.get(set, :green, 0) <= 13 and
+      Keyword.get(set, :blue, 0) <= 14
+  end)
+end)
+|> Stream.map(fn {id, _sets} -> id end)
+|> Enum.sum()
+```
+
+## Part 2
+
+```elixir
+games
+|> Stream.map(fn {_id, sets} ->
+  Enum.reduce(sets, %{}, fn set, acc ->
+    Map.merge(acc, Map.new(set), fn _color, count1, count2 ->
+      max(count1, count2)
+    end)
+  end)
+end)
+|> Stream.map(fn map ->
+  map |> Map.values() |> Enum.product()
+end)
+|> Enum.sum()
+```
+
+## Cleanup
+
+```elixir
+File.rm(parser_path)
+```
+
+```elixir
+File.rm(path)
+```
+
+<!-- livebook:{"offset":3172,"stamp":{"token":"XCP.9CLsb72DoYsVpFMLrG0yFuRPwdavG8DFU0qQ-tSvVv0lX2XBCoRBOR-LUxT3ldAzZrDj2UKcb-GXgx32B4QgWN3LqKlWk1fbBir0a6xAmE-d6Dq4n2o","version":2}} -->

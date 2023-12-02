@@ -1,0 +1,84 @@
+# Advent of Code 2023 Day 2
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.5"}
+])
+```
+
+## Section
+
+<!-- livebook:{"attrs":{"assign_to":"puzzle_input","day":"2","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "2", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+defmodule AoC2023.Day02 do
+  def part1(puzzle_input) do
+    puzzle_input
+    |> parse_input()
+    |> Stream.filter(fn {_id, sets} ->
+      Enum.all?(sets, fn set ->
+        Map.get(set, "red", 0) <= 12 and
+          Map.get(set, "green", 0) <= 13 and
+          Map.get(set, "blue", 0) <= 14
+      end)
+    end)
+    |> Stream.map(&elem(&1, 0))
+    |> Enum.sum()
+  end
+
+  def part2(puzzle_input) do
+    puzzle_input
+    |> parse_input()
+    |> Stream.map(fn {_id, sets} ->
+      Enum.reduce(sets, %{}, fn set, acc ->
+        Map.merge(acc, set, fn _k, v1, v2 -> max(v1, v2) end)
+      end)
+    end)
+    |> Stream.map(&(&1["red"] * &1["green"] * &1["blue"]))
+    |> Enum.sum()
+  end
+
+  def parse_input(puzzle_input) do
+    puzzle_input
+    |> String.split("\n")
+    |> Enum.map(&parse_line/1)
+  end
+
+  defp parse_line(line) do
+    [id_part | sets_part] = String.split(line, ~r/[:;]/)
+
+    id =
+      ~r/\d+/
+      |> Regex.run(id_part)
+      |> hd()
+      |> String.to_integer()
+
+    sets = Enum.map(sets_part, &parse_set/1)
+
+    {id, sets}
+  end
+
+  defp parse_set(string) do
+    ~r/(\d+) (\w+)/
+    |> Regex.scan(string, capture: :all_but_first)
+    |> Map.new(fn [count, color] ->
+      {color, String.to_integer(count)}
+    end)
+  end
+end
+```
+
+```elixir
+AoC2023.Day02.part1(puzzle_input)
+```
+
+```elixir
+AoC2023.Day02.part2(puzzle_input)
+```
+
+<!-- livebook:{"offset":1756,"stamp":{"token":"XCP.oS534QfsYs_aG_DBi3icxXHoS5mwrsuzDLd30p9SrOKpvvE2acB9eplfrJk9WNvD4fzFCocbpfLdjSEbw1pxqu_X7sXXi9uoBlwEIYIDpOU12DV1sbI","version":2}} -->

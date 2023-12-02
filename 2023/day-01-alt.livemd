@@ -1,0 +1,80 @@
+# Advent of Code 2023 Day 1 (Another Solution for Part 2)
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.5"}
+])
+```
+
+## Section
+
+<!-- livebook:{"attrs":{"assign_to":"puzzle_input","day":"1","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "1", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+reverse_puzzle_input = String.reverse(puzzle_input)
+```
+
+```elixir
+word_map =
+  ~w[
+    one
+    two
+    three
+    four
+    five
+    six
+    seven
+    eight
+    nine
+  ]
+  |> Enum.zip_with(1..9, fn w, n -> {w, n} end)
+  |> Map.new()
+  |> Map.merge(Map.new(0..9, &{to_string(&1), &1}))
+```
+
+```elixir
+reverse_word_map =
+  Map.new(word_map, fn {k, v} ->
+    {String.reverse(k), v}
+  end)
+```
+
+```elixir
+regex = word_map |> Map.keys() |> Enum.join("|") |> Regex.compile!()
+```
+
+```elixir
+reverse_regex = reverse_word_map |> Map.keys() |> Enum.join("|") |> Regex.compile!()
+```
+
+```elixir
+get_first_nums = fn input, word_map, regex ->
+  input
+  |> String.split("\n")
+  |> Stream.flat_map(fn line ->
+    Regex.run(regex, line)
+  end)
+  |> Enum.map(&word_map[&1])
+end
+```
+
+```elixir
+first_digits = get_first_nums.(puzzle_input, word_map, regex)
+```
+
+```elixir
+last_digits = get_first_nums.(reverse_puzzle_input, reverse_word_map, reverse_regex)
+```
+
+```elixir
+first_digits
+|> Enum.zip_with(last_digits, &(&1 * 10 + &2))
+|> Enum.sum()
+```
+
+<!-- livebook:{"offset":1476,"stamp":{"token":"XCP.cBu9SoYvWL5wJFY2kuqeSP-0Q6jUY07n9Z9kELqv83-ErYSYLiiPTs9QXhBHW4qbbgS7TgIBMrJ7o6n5KkDi9pCI0D_pufdh0NlUzgUXp1vsspr4AVQ","version":2}} -->
