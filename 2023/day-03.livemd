@@ -1,0 +1,77 @@
+# Advent of Code 2023 Day 3
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.5"}
+])
+```
+
+## Section
+
+<!-- livebook:{"attrs":{"assign_to":"puzzle_input","day":"3","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "3", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+lines = String.split(puzzle_input, "\n") |> Enum.with_index()
+```
+
+```elixir
+nums =
+  lines
+  |> Enum.flat_map(fn {line, i} ->
+    Regex.scan(~r/\d+/, line, return: :index)
+    |> List.flatten()
+    |> Enum.map(fn {j, len} ->
+      {(i - 1)..(i + 1)//1, (j - 1)..(j + len)//1, String.to_integer(String.slice(line, j, len))}
+    end)
+  end)
+```
+
+## Part 1
+
+```elixir
+symbol_positions =
+  lines
+  |> Stream.flat_map(fn {line, i} ->
+    Regex.scan(~r/[^a-zA-Z0-9\.]/, line, return: :index)
+    |> List.flatten()
+    |> Enum.map(fn {j, _} -> {i, j} end)
+  end)
+  |> MapSet.new()
+```
+
+```elixir
+nums
+|> Stream.filter(fn {row_span, col_span, _n} ->
+  for i <- row_span,
+      j <- col_span,
+      reduce: false,
+      do: (acc -> acc || {i, j} in symbol_positions)
+end)
+|> Stream.map(&elem(&1, 2))
+|> Enum.sum()
+```
+
+## Part 2
+
+```elixir
+lines
+|> Stream.flat_map(fn {line, i} ->
+  Regex.scan(~r/\*/, line, return: :index)
+  |> List.flatten()
+  |> Enum.map(fn {j, _} -> {i, j} end)
+end)
+|> Stream.map(fn {i, j} ->
+  case Enum.filter(nums, fn {row_span, col_span, _n} -> i in row_span and j in col_span end) do
+    [a, b] -> elem(a, 2) * elem(b, 2)
+    _ -> 0
+  end
+end)
+|> Enum.sum()
+```
+
+<!-- livebook:{"offset":1596,"stamp":{"token":"XCP.tjFq6EE3mamaztBit9q4Kqj0RRwhQPXd4yEBKN2HMf-oUQwjKue_KTJ9WMPXUNCGvT6dCoWdZV6chSmzumTvcIFQyPP9_EUt4sZBv0zGC5ivsFzvdnA","version":2}} -->
