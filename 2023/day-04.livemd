@@ -24,14 +24,14 @@ cards =
   puzzle_input
   |> String.split("\n")
   |> Stream.map(&String.split(&1, ~r/[:|]/))
-  |> Stream.map(fn [_, winning, possessed] ->
+  |> Stream.map(fn [_, win, got] ->
     {
-      winning |> String.split(" ", trim: true),
-      possessed |> String.split(" ", trim: true)
+      win |> String.split(" ", trim: true),
+      got |> String.split(" ", trim: true)
     }
   end)
-  |> Stream.map(fn {winning, possessed} ->
-    winning -- winning -- possessed
+  |> Stream.map(fn {win, got} ->
+    win -- win -- got
   end)
   |> Enum.map(&length/1)
 ```
@@ -51,7 +51,7 @@ cards
 cards =
   cards
   |> Stream.with_index(1)
-  |> Map.new(fn {hits, i} -> {i, hits} end)
+  |> Map.new(fn {won, i} -> {i, won} end)
 ```
 
 ```elixir
@@ -64,9 +64,9 @@ counts =
 counts =
   for i <- 1..map_size(cards), reduce: counts do
     counts ->
-      wins = cards[i]
+      won = cards[i]
 
-      for j <- (i + 1)..(i + wins)//1, j <= map_size(counts), reduce: counts do
+      for j <- (i + 1)..(i + won)//1, j <= map_size(counts), reduce: counts do
         counts -> %{counts | j => counts[j] + counts[i]}
       end
   end
@@ -78,4 +78,4 @@ counts
 |> Enum.sum()
 ```
 
-<!-- livebook:{"offset":1417,"stamp":{"token":"XCP.NTFWOzNP7ff4iKkNjokEgtN6rPyibl2ihjMZpQ6srj80uQpvrS6Kfb9wViyXR5e14FCbGRZwtYvgnc7223WQhGelvL3QAfUWnMfFd5-OnMP-FVRJ5iM","version":2}} -->
+<!-- livebook:{"offset":1369,"stamp":{"token":"XCP.hK6TsqZjLeJ8CfP5bc-cDmXqi9IJ_tDBVKbLQZFHaOJTmtpKAJIoOhQAG6SGApuzTWBXU-ywQpYvUPpZc86YtEBjJ3r9useC51VWYeCPMkBllBmM1aU","version":2}} -->
