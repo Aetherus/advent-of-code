@@ -1,0 +1,81 @@
+# Advent of Code 2023 Day 4
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.5"}
+])
+```
+
+## Prep
+
+<!-- livebook:{"attrs":{"assign_to":"puzzle_input","day":"4","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "4", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+```elixir
+cards =
+  puzzle_input
+  |> String.split("\n")
+  |> Stream.map(&String.split(&1, ~r/[:|]/))
+  |> Stream.map(fn [_, winning, possessed] ->
+    {
+      winning |> String.split(" ", trim: true),
+      possessed |> String.split(" ", trim: true)
+    }
+  end)
+  |> Stream.map(fn {winning, possessed} ->
+    winning -- winning -- possessed
+  end)
+  |> Enum.map(&length/1)
+```
+
+## Part 1
+
+```elixir
+cards
+|> Stream.map(&(2 ** (&1 - 1)))
+|> Stream.map(&floor/1)
+|> Enum.sum()
+```
+
+## Part 2
+
+```elixir
+cards =
+  cards
+  |> Stream.with_index(1)
+  |> Map.new(fn {hits, i} -> {i, hits} end)
+```
+
+```elixir
+counts =
+  cards
+  |> Map.new(fn {i, _} -> {i, 1} end)
+```
+
+```elixir
+counts =
+  for i <- 1..map_size(cards), reduce: counts do
+    counts ->
+      wins = cards[i]
+
+      for j <- (i + 1)..(i + wins)//1, j <= map_size(counts), reduce: counts do
+        counts -> %{counts | j => counts[j] + counts[i]}
+      end
+  end
+```
+
+```elixir
+counts
+|> Map.values()
+|> Enum.sum()
+```
+
+<!-- livebook:{"offset":1417,"stamp":{"token":"XCP.NTFWOzNP7ff4iKkNjokEgtN6rPyibl2ihjMZpQ6srj80uQpvrS6Kfb9wViyXR5e14FCbGRZwtYvgnc7223WQhGelvL3QAfUWnMfFd5-OnMP-FVRJ5iM","version":2}} -->
