@@ -78,4 +78,9 @@ first_digits
 |> Enum.sum()
 ```
 
-<!-- livebook:{"offset":1569,"stamp":{"token":"XCP.Tamw5wFMYro2b8TunvGIZVGKI47seVOSRNSnfWtWHBEDbGz-9nzK51XrcQhmY-NfcHo3MOpa0yK6P_p8TTZiL09O-2Q4VoGXuCXa4rl-sFd4zY_AILI","version":2}} -->
+```elixir
+# 👇 This works too.
+Enum.sum(first_digits) * 10 + Enum.sum(last_digits)
+```
+
+<!-- livebook:{"offset":1659,"stamp":{"token":"XCP.DRcgvqRmwEtjEV32e51o69_CllrPnfvQp88vRAYtZ10TezDhLspvBTCT8kJjpbarLxrtDuk9l2L1N0XIDMOlYK9LemMIo1o1Jes5Uy5O_Sn7QoyBQ5U","version":2}} -->
