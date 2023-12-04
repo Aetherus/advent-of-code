@@ -1,0 +1,72 @@
+# Advent of Code 2023 Day 1 (Yet Another Solution for Part 2)
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.5"}
+])
+```
+
+## Section
+
+<!-- livebook:{"attrs":{"assign_to":"puzzle_input","day":"1","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "1", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+digit_map = %{
+  "one" => 1,
+  "two" => 2,
+  "three" => 3,
+  "four" => 4,
+  "five" => 5,
+  "six" => 6,
+  "seven" => 7,
+  "eight" => 8,
+  "nine" => 9,
+  "0" => 0,
+  "1" => 1,
+  "2" => 2,
+  "3" => 3,
+  "4" => 4,
+  "5" => 5,
+  "6" => 6,
+  "7" => 7,
+  "8" => 8,
+  "9" => 9
+}
+```
+
+```elixir
+first_digits_regex = digit_map |> Map.keys() |> Enum.join("|") |> then(&~r/^.*?(#{&1})/m)
+```
+
+```elixir
+last_digits_regex = digit_map |> Map.keys() |> Enum.join("|") |> then(&~r/^.*(#{&1})/m)
+```
+
+```elixir
+first_digits_sum =
+  first_digits_regex
+  |> Regex.scan(puzzle_input, capture: :all_but_first)
+  |> List.flatten()
+  |> Stream.map(&digit_map[&1])
+  |> Enum.sum()
+```
+
+```elixir
+last_digits_sum =
+  last_digits_regex
+  |> Regex.scan(puzzle_input, capture: :all_but_first)
+  |> List.flatten()
+  |> Stream.map(&digit_map[&1])
+  |> Enum.sum()
+```
+
+```elixir
+first_digits_sum * 10 + last_digits_sum
+```
+
+<!-- livebook:{"offset":1341,"stamp":{"token":"XCP.cS4o5xrlLHcUnsKMn0FR7Lsb8I84d6ZHhVQtxWt-N3CVF3Mzv8NmLqnL1xHguWQJICeSL-dncBsMuK9Y7d94HtkEcMSAzwItbjfgjhuCwrysRY3jwqY","version":2}} -->

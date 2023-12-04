@@ -83,4 +83,4 @@ first_digits
 Enum.sum(first_digits) * 10 + Enum.sum(last_digits)
 ```
 
-<!-- livebook:{"offset":1659,"stamp":{"token":"XCP.DRcgvqRmwEtjEV32e51o69_CllrPnfvQp88vRAYtZ10TezDhLspvBTCT8kJjpbarLxrtDuk9l2L1N0XIDMOlYK9LemMIo1o1Jes5Uy5O_Sn7QoyBQ5U","version":2}} -->
+<!-- livebook:{"offset":1659,"stamp":{"token":"XCP.M9VRmoNEqk8oB4e9Vt-KHHAOG7hmhLjBTR5qHUJkpYy4jFtKVnNNtQ346qcIZ15rIAezm_dSQXO4S1oNjHjcvmVXVz6FDbEYTrBYBF1eUmd6sJybRrQ","version":2}} -->
