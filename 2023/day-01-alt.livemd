@@ -73,8 +73,9 @@ last_digits = get_first_nums.(reverse_puzzle_input, reverse_word_map, reverse_re
 
 ```elixir
 first_digits
+# 👇 Here's the interesting thing. You don't need to reverse `last_digits` before zipping.
 |> Enum.zip_with(last_digits, &(&1 * 10 + &2))
 |> Enum.sum()
 ```
 
-<!-- livebook:{"offset":1476,"stamp":{"token":"XCP.cBu9SoYvWL5wJFY2kuqeSP-0Q6jUY07n9Z9kELqv83-ErYSYLiiPTs9QXhBHW4qbbgS7TgIBMrJ7o6n5KkDi9pCI0D_pufdh0NlUzgUXp1vsspr4AVQ","version":2}} -->
+<!-- livebook:{"offset":1569,"stamp":{"token":"XCP.Tamw5wFMYro2b8TunvGIZVGKI47seVOSRNSnfWtWHBEDbGz-9nzK51XrcQhmY-NfcHo3MOpa0yK6P_p8TTZiL09O-2Q4VoGXuCXa4rl-sFd4zY_AILI","version":2}} -->
