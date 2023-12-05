@@ -1,0 +1,162 @@
+# Advent of Code 2023 Day 5
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.5"}
+])
+```
+
+## Prep
+
+<!-- livebook:{"attrs":{"assign_to":"puzzle_input","day":"5","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "5", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+```elixir
+[seeds | mappings] = String.split(puzzle_input, "\n\n")
+```
+
+```elixir
+seeds =
+  seeds |> String.trim_leading("seeds: ") |> String.split() |> Enum.map(&String.to_integer/1)
+```
+
+```elixir
+mappings =
+  mappings
+  |> Enum.map(fn content ->
+    content
+    |> String.split(~r/\:|\s+/, trim: true)
+    |> tl()
+    |> tl()
+    |> Enum.map(&String.to_integer/1)
+    |> Enum.chunk_every(3)
+    |> Enum.reduce(:gb_trees.empty(), fn [dst, src, len], tree ->
+      :gb_trees.insert(
+        {src, src + len - 1},
+        {dst, dst + len - 1},
+        tree
+      )
+    end)
+  end)
+```
+
+```elixir
+find_dst = fn mapping, source ->
+  mapping
+  |> :gb_trees.iterator()
+  |> Stream.unfold(fn iterator ->
+    case :gb_trees.next(iterator) do
+      :none -> nil
+      {src_range, dst_range, iterator} -> {{src_range, dst_range}, iterator}
+    end
+  end)
+  |> Enum.find({{source, source}, {source, source}}, fn {{a, b}, _dst_range} ->
+    source in a..b
+  end)
+  |> then(fn {{a, _}, {c, _}} ->
+    c + source - a
+  end)
+end
+```
+
+```elixir
+seeds
+|> Enum.map(fn seed ->
+  Enum.reduce(mappings, seed, find_dst)
+end)
+|> Enum.min()
+```
+
+## Part 2
+
+```elixir
+seeds =
+  seeds
+  |> Stream.chunk_every(2)
+  |> Enum.map(fn [src, len] ->
+    {src, src + len - 1}
+  end)
+```
+
+```elixir
+defmodule AoC2023.Day5.Part2 do
+  @spec get_destinations(:gb_trees.tree(range, range), range) :: [range]
+        when range: {from, to},
+             from: integer(),
+             to: integer()
+  def get_destinations(mapping, range) do
+    iterator = :gb_trees.iterator(mapping)
+
+    do_get_destinations(iterator, range, [])
+  end
+
+  defp do_get_destinations(iterator, {a, b}, acc) do
+    case :gb_trees.next(iterator) do
+      # No more ranges in the mapping
+      :none ->
+        [{a, b} | acc]
+
+      #                a-----b
+      # s1--------s2
+      {{_s1, s2}, {_d1, _d2}, iterator} when s2 < a ->
+        do_get_destinations(iterator, {a, b}, acc)
+
+      # a-------b
+      #             s1--------s2
+      {{s1, _s2}, {_d1, _d2}, _iterator} when s1 > b ->
+        [{a, b} | acc]
+
+      #    a----b
+      # s1---------s2
+      {{s1, s2}, {d1, _d2}, _iterator} when s1 <= a and s2 >= b ->
+        [{a - s1 + d1, b - s1 + d1} | acc]
+
+      #  a---------b
+      #  s1---s2
+      {{s1, s2}, {d1, d2}, iterator} when s1 == a and s2 < b ->
+        do_get_destinations(iterator, {s2 + 1, b}, [{d1, d2} | acc])
+
+      #  a---------b
+      #      s1---s2
+      {{s1, s2}, {d1, d2}, _iterator} when s1 > a and s2 == b ->
+        [{a, s1 - 1}, {d1, d2} | acc]
+
+      # a----------b
+      #   s1---s2
+      {{s1, s2}, {d1, d2}, iterator} when s1 > a and s2 < b ->
+        do_get_destinations(iterator, {s2 + 1, b}, [{a, s1 - 1}, {d1, d2} | acc])
+
+      #     a-------b
+      # s1------s2
+      {{s1, s2}, {d1, d2}, iterator} when s1 < a and s2 < b ->
+        do_get_destinations(iterator, {s2 + 1, b}, [{a - s1 + d1, d2} | acc])
+
+      # a-------b
+      #    s1------s2
+      {{s1, s2}, {d1, _d2}, _iterator} when s1 > a and s2 > b ->
+        [{a, s1 - 1}, {d1, b - s1 + d1} | acc]
+    end
+  end
+end
+```
+
+```elixir
+import AoC2023.Day5.Part2
+
+mappings
+|> Enum.reduce(seeds, fn mapping, sources ->
+  Enum.flat_map(sources, &get_destinations(mapping, &1))
+end)
+|> Enum.min()
+|> elem(0)
+```
+
+<!-- livebook:{"offset":3687,"stamp":{"token":"XCP.1wtyB0bgk0ALrEFMDcR3dIREqmgeVzdAD4kW9IloHcuM-XQakX9TqAsenA8WHMamSax27L3uJ2qdOEQvt7WrTH8h3YOeu1gMnx0o5X5o_PtmDfBGP_g","version":2}} -->
