@@ -48,6 +48,8 @@ mappings =
   end)
 ```
 
+## Part 1
+
 ```elixir
 find_dst = fn mapping, source ->
   mapping
@@ -159,4 +161,4 @@ end)
 |> elem(0)
 ```
 
-<!-- livebook:{"offset":3687,"stamp":{"token":"XCP.1wtyB0bgk0ALrEFMDcR3dIREqmgeVzdAD4kW9IloHcuM-XQakX9TqAsenA8WHMamSax27L3uJ2qdOEQvt7WrTH8h3YOeu1gMnx0o5X5o_PtmDfBGP_g","version":2}} -->
+<!-- livebook:{"offset":3698,"stamp":{"token":"XCP.5BboM52CzJtUptanRsD5VPrLeSTdBQZ0rozryDROONqidUb-uOw3YS3PFB9wjaEjsg4LEqt6F9Fh5t_wfU7IAwVPiUHqNBgzfS6Z60aDgdn73ntxG5I","version":2}} -->
