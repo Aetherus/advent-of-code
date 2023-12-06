@@ -1,0 +1,61 @@
+# Advent of Code 2023 Day 6
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.5"}
+])
+```
+
+## Prep
+
+<!-- livebook:{"attrs":{"assign_to":"puzzle_input","day":"6","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "6", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+races =
+  puzzle_input
+  |> String.split("\n")
+  |> Stream.map(&String.split/1)
+  |> Stream.map(&tl/1)
+  |> Stream.map(&Enum.map(&1, fn s -> String.to_integer(s) end))
+  |> Enum.zip()
+```
+
+## Part 1
+
+```elixir
+races
+|> Enum.map(fn {time, distance} ->
+  Enum.count(0..time, fn speed ->
+    (time - speed) * speed > distance
+  end)
+end)
+|> Enum.product()
+```
+
+## Part 2
+
+```elixir
+[t, s] =
+  puzzle_input
+  |> String.split("\n")
+  |> Enum.map(fn line ->
+    ~r/\d/
+    |> Regex.scan(line)
+    |> List.flatten()
+    |> Enum.join()
+    |> String.to_integer()
+  end)
+```
+
+## Part 2
+
+```elixir
+:math.sqrt(t * t - 4 * s) |> floor()
+```
+
+<!-- livebook:{"offset":1041,"stamp":{"token":"XCP.IFIvLB_cCVy_47WwLMt6jSMrjeI73Gl13bUr5t8sM7sLb-TFj46FPikjYsQkQkR4tPZRTiyJCJ3Htin6_byfSBpyAKuN9EPP7VOBfLiu6gus8FYJdgk","version":2}} -->
