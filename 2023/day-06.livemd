@@ -15,24 +15,20 @@ Mix.install([
   KinoAOC.download_puzzle("2023", "6", System.fetch_env!("LB_AOC_SESSION"))
 ```
 
-```elixir
-races =
-  puzzle_input
-  |> String.split("\n")
-  |> Stream.map(&String.split/1)
-  |> Stream.map(&tl/1)
-  |> Stream.map(&Enum.map(&1, fn s -> String.to_integer(s) end))
-  |> Enum.zip()
-```
-
 ## Part 1
 
 ```elixir
-races
-|> Enum.map(fn {time, distance} ->
-  Enum.count(0..time, fn speed ->
-    (time - speed) * speed > distance
-  end)
+puzzle_input
+|> String.split("\n")
+|> Stream.map(&String.split/1)
+|> Stream.map(&tl/1)
+|> Stream.map(&Enum.map(&1, fn s -> String.to_integer(s) end))
+|> Enum.zip()
+|> Enum.map(fn {t, s} ->
+  delta = :math.sqrt(t * t - 4 * s)
+  v1 = ceil((t - delta) / 2)
+  v2 = floor((t + delta) / 2)
+  v2 - v1 + 1
 end)
 |> Enum.product()
 ```
@@ -52,10 +48,11 @@ end)
   end)
 ```
 
-## Part 2
-
 ```elixir
-:math.sqrt(t * t - 4 * s) |> floor()
+delta = :math.sqrt(t * t - 4 * s)
+v1 = ceil((t - delta) / 2)
+v2 = floor((t + delta) / 2)
+v2 - v1 + 1
 ```
 
-<!-- livebook:{"offset":1041,"stamp":{"token":"XCP.IFIvLB_cCVy_47WwLMt6jSMrjeI73Gl13bUr5t8sM7sLb-TFj46FPikjYsQkQkR4tPZRTiyJCJ3Htin6_byfSBpyAKuN9EPP7VOBfLiu6gus8FYJdgk","version":2}} -->
+<!-- livebook:{"offset":1073,"stamp":{"token":"XCP.pTJitPTVKAotVKtnpF5KsaBYdrFc9Y7BIBJwjqW4bn86nMEucS1B4AX-IkvIlOr1eDESeQokiwcFfGL9kueTlv_DfV8Xcz5QEq4NXW1f9MB1AuXIDx4","version":2}} -->
