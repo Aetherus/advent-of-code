@@ -1,4 +1,4 @@
-# Advent of Code 2023 Day 6
+# Advent of Code 2023 Day 6 - Newton's Approx
 
 ```elixir
 Mix.install([
@@ -19,6 +19,21 @@ Mix.install([
 IO.puts(puzzle_input)
 ```
 
+```elixir
+approx = fn t, s, v ->
+  v
+  |> Stream.unfold(fn v ->
+    y = (v - t) * v + s
+    k = 2 * v - t
+    dv = div(y, k)
+    {v, v - dv}
+  end)
+  |> Stream.chunk_every(2, 1)
+  |> Enum.find(&match?([a, a], &1))
+  |> hd()
+end
+```
+
 ## Part 1
 
 ```elixir
@@ -29,10 +44,7 @@ puzzle_input
 |> Stream.map(&Enum.map(&1, fn s -> String.to_integer(s) end))
 |> Enum.zip()
 |> Enum.map(fn {t, s} ->
-  delta = :math.sqrt(t * t - 4 * s)
-  v1 = ceil((t - delta) / 2)
-  v2 = floor((t + delta) / 2)
-  v2 - v1 + 1
+  approx.(t, s, t) - approx.(t, s, 0) - 1
 end)
 |> Enum.product()
 ```
@@ -53,10 +65,7 @@ end)
 ```
 
 ```elixir
-delta = :math.sqrt(t * t - 4 * s)
-v1 = ceil((t - delta) / 2)
-v2 = floor((t + delta) / 2)
-v2 - v1 + 1
+approx.(t, s, t) - approx.(t, s, 0) - 1
 ```
 
-<!-- livebook:{"offset":1110,"stamp":{"token":"XCP.Fjjx3_xAqPkfiDQ2MnDEsE7Gzfralyu65HxRbYhZ13hyJCbJLcSxvSqVmnZia7WJaSfMcKUfBU96fFI-lYAPEXEsQYqhepKvsskGOnC8gMGAbCJPMLk","version":2}} -->
+<!-- livebook:{"offset":1233,"stamp":{"token":"XCP.0uHRnNqAxMWH8BBq9e54BDlFqVe2Yg8_yf25H1M7MRYgd5nKm7yokNZ30ey1WeC-p2IgPQnpidLc3jP3zw3mSkBbYOCYhPfvyKCvDVz5dCDlVu9KEEQ","version":2}} -->
