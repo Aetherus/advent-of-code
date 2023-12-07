@@ -1,0 +1,80 @@
+# Advent of Code 2023 - Day 7
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.5"}
+])
+```
+
+## Prep
+
+<!-- livebook:{"attrs":{"assign_to":"puzzle_input","day":"7","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "7", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+```elixir
+strengths =
+  ?2..?9
+  |> Map.new(&{&1, &1 - ?0})
+  |> Map.merge(%{
+    ?T => 10,
+    ?J => 11,
+    ?Q => 12,
+    ?K => 13,
+    ?A => 14
+  })
+```
+
+## Part 1
+
+```elixir
+puzzle_input
+|> String.split()
+|> Stream.chunk_every(2)
+|> Stream.map(fn [hand, bid] ->
+  cards = String.to_charlist(hand)
+  freqs = cards |> Enum.frequencies() |> Map.values() |> Enum.sort(:desc)
+  scores = Enum.map(cards, &strengths[&1])
+  {freqs, scores, String.to_integer(bid)}
+end)
+|> Enum.sort()
+|> Stream.map(&elem(&1, 2))
+|> Stream.with_index(1)
+|> Stream.map(fn {bid, rank} -> bid * rank end)
+|> Enum.sum()
+```
+
+## Part 2
+
+```elixir
+strengths = %{strengths | ?J => 1}
+```
+
+```elixir
+puzzle_input
+|> String.split()
+|> Stream.chunk_every(2)
+|> Stream.map(fn [hand, bid] ->
+  cards = String.to_charlist(hand)
+  freqs = cards |> Enum.frequencies()
+  {jokers, freqs} = Map.pop(freqs, ?J, 0)
+  freqs = freqs |> Map.values() |> Enum.sort(:desc)
+  freqs = (freqs == [] && [5]) || [hd(freqs) + jokers | tl(freqs)]
+  scores = Enum.map(cards, &strengths[&1])
+  {freqs, scores, String.to_integer(bid)}
+end)
+|> Enum.sort()
+|> Stream.map(&elem(&1, 2))
+|> Stream.with_index(1)
+|> Stream.map(fn {bid, rank} -> bid * rank end)
+|> Enum.sum()
+```
+
+<!-- livebook:{"offset":1656,"stamp":{"token":"XCP.78rfj6eobEmIf2ukBI_5y4tVqIu73r-ksiS6VvW19WzvTUNG0V8FncbC_lIKJzPmQJa_WgVrpuygibOUocBkMtreZeT5a-d-nbQj_Xq0W900dsAjTiw","version":2}} -->
