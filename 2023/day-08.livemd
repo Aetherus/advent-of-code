@@ -1,0 +1,146 @@
+# Advent of Code 2023 Day 8
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.5"}
+])
+```
+
+## Prep
+
+<!-- livebook:{"attrs":{"assign_to":"puzzle_input","day":"8","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "8", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+```elixir
+[instructions, "" | paths] = String.split(puzzle_input, "\n")
+```
+
+```elixir
+instructions =
+  for <<instruction <- instructions>> do
+    case instruction do
+      ?L -> 0
+      ?R -> 1
+    end
+  end
+```
+
+```elixir
+map =
+  paths
+  |> Map.new(fn <<from::binary-3, " = (", left::binary-3, ", ", right::binary-3, ")">> ->
+    {from, {left, right}}
+  end)
+```
+
+```elixir
+instructions_stream = Stream.cycle(instructions)
+```
+
+## Part 1
+
+```elixir
+instructions_stream
+|> Enum.reduce_while({"AAA", 0}, fn instruction, {curr, steps} ->
+  if curr == "ZZZ" do
+    {:halt, {curr, steps}}
+  else
+    {:cont, {elem(map[curr], instruction), steps + 1}}
+  end
+end)
+|> elem(1)
+```
+
+## Part 2
+
+```elixir
+ghost_initial_positions = map |> Map.keys() |> Enum.filter(&String.ends_with?(&1, "A"))
+```
+
+```elixir
+steps =
+  ghost_initial_positions
+  |> Task.async_stream(
+    fn ghost ->
+      instructions_stream
+      |> Enum.reduce_while({ghost, 0}, fn instruction, {curr, steps} ->
+        if String.ends_with?(curr, "Z") do
+          {:halt, {curr, steps}}
+        else
+          {:cont, {elem(map[curr], instruction), steps + 1}}
+        end
+      end)
+      |> elem(1)
+    end,
+    ordered: false
+  )
+  |> Enum.map(&elem(&1, 1))
+```
+
+```elixir
+gcd = fn
+  a, b, recur when a < b ->
+    recur.(b, a, recur)
+
+  a, b, recur ->
+    case rem(a, b) do
+      0 -> b
+      r -> recur.(b, r, recur)
+    end
+end
+```
+
+```elixir
+lcm = fn a, b ->
+  div(a * b, gcd.(a, b, gcd))
+end
+```
+
+```elixir
+steps |> Enum.reduce(lcm)
+```
+
+## Verify that each ghost can goes back to its original position
+
+```elixir
+tmp =
+  for ghost <- ghost_initial_positions do
+    instructions_stream
+    |> Enum.reduce_while({ghost, 0, []}, fn instruction, {curr, steps, zettas} ->
+      if String.ends_with?(curr, "Z") do
+        if length(zettas) > 1 do
+          {:halt, {curr, steps, [{curr, steps} | zettas]}}
+        else
+          {:cont, {elem(map[curr], instruction), steps + 1, [{curr, steps} | zettas]}}
+        end
+      else
+        {:cont, {elem(map[curr], instruction), steps + 1, zettas}}
+      end
+    end)
+    |> then(&{ghost, elem(&1, 2)})
+  end
+  |> Map.new()
+```
+
+```elixir
+l = length(instructions)
+```
+
+```elixir
+tmp
+|> Map.values()
+|> List.flatten()
+|> Enum.all?(fn {_, v} ->
+  rem(v, l) == 0
+end)
+```
+
+<!-- livebook:{"offset":2717,"stamp":{"token":"XCP.ZfIkteQfF-fnnQFTP5nQ735_VzpS6DI5HNOnKQK5bbBdQO1ZXDI4WrXnAv6gbnhq42r9w5GWPNEWWgXJd5CphlNZIHFqVDYaT8s3JtZpjlGwiZAoYBw","version":2}} -->
