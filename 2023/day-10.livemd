@@ -1,0 +1,168 @@
+# Advent of Code 2023 Day 10
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.5"},
+  {:libgraph, "~> 0.16.0"},
+  {:kino_vega_lite, "~> 0.1.10"}
+])
+```
+
+## Prep
+
+<!-- livebook:{"attrs":{"assign_to":"puzzle_input","day":"10","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "10", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+```elixir
+chars =
+  puzzle_input
+  |> String.split("\n")
+  |> Enum.map(&String.to_charlist/1)
+```
+
+```elixir
+grid =
+  for {row, i} <- Stream.with_index(chars),
+      {val, j} <- Stream.with_index(row),
+      into: %{},
+      do: {{i * 2 + 1, j * 2 + 1}, val}
+```
+
+```elixir
+graph =
+  for {{i, j}, val} <- grid, reduce: Graph.new(type: :undirected) do
+    graph ->
+      case val do
+        ?. ->
+          graph
+
+        ?- ->
+          graph |> Graph.add_edge({i, j}, {i, j - 1}) |> Graph.add_edge({i, j}, {i, j + 1})
+
+        ?| ->
+          graph |> Graph.add_edge({i, j}, {i - 1, j}) |> Graph.add_edge({i, j}, {i + 1, j})
+
+        ?7 ->
+          graph |> Graph.add_edge({i, j}, {i, j - 1}) |> Graph.add_edge({i, j}, {i + 1, j})
+
+        ?F ->
+          graph |> Graph.add_edge({i, j}, {i, j + 1}) |> Graph.add_edge({i, j}, {i + 1, j})
+
+        ?L ->
+          graph |> Graph.add_edge({i, j}, {i, j + 1}) |> Graph.add_edge({i, j}, {i - 1, j})
+
+        ?J ->
+          graph |> Graph.add_edge({i, j}, {i, j - 1}) |> Graph.add_edge({i, j}, {i - 1, j})
+
+        ?S ->
+          graph
+          |> Graph.add_edge({i, j}, {i, j - 1})
+          |> Graph.add_edge({i, j}, {i, j + 1})
+          |> Graph.add_edge({i, j}, {i - 1, j})
+          |> Graph.add_edge({i, j}, {i + 1, j})
+      end
+  end
+```
+
+```elixir
+{start, _} = Enum.find(grid, fn {_, val} -> val == ?S end)
+```
+
+```elixir
+components = Graph.components(graph)
+```
+
+```elixir
+loop = Enum.find(components, &Enum.any?(&1, fn v -> v == start end))
+```
+
+## Part 1
+
+```elixir
+loop |> length() |> div(4)
+```
+
+## Part 2
+
+```elixir
+i_min = Enum.min(loop) |> elem(0)
+```
+
+```elixir
+i_max = Enum.max(loop) |> elem(0)
+```
+
+```elixir
+j_min = loop |> Enum.min_by(&elem(&1, 1)) |> elem(1)
+```
+
+```elixir
+j_max = loop |> Enum.max_by(&elem(&1, 1)) |> elem(1)
+```
+
+```elixir
+loop = MapSet.new(loop)
+```
+
+```elixir
+Graph.neighbors(graph, start) |> Enum.map(&Graph.neighbors(graph, &1))
+```
+
+```elixir
+for i <- i_min..i_max//2, reduce: 0 do
+  count ->
+    for j <- (j_min - 2)..(j_max + 2)//2, reduce: {count, false, nil} do
+      {count, inside?, prev} ->
+        cond do
+          inside? && {i, j} not in loop ->
+            {count + 1, true, prev}
+
+          !inside? && {i, j} not in loop ->
+            {count, false, prev}
+
+          grid[{i, j}] in [?|, ?S] && prev == nil ->
+            {count, !inside?, nil}
+
+          grid[{i, j}] in [?J, ?L] && prev == nil ->
+            {count, inside?, :up}
+
+          grid[{i, j}] in [?J, ?L] && prev == :up ->
+            {count, inside?, nil}
+
+          grid[{i, j}] in [?J, ?L] && prev == :down ->
+            {count, !inside?, nil}
+
+          grid[{i, j}] in [?7, ?F] && prev == nil ->
+            {count, inside?, :down}
+
+          grid[{i, j}] in [?7, ?F] && prev == :up ->
+            {count, !inside?, nil}
+
+          grid[{i, j}] in [?7, ?F] && prev == :down ->
+            {count, inside?, nil}
+
+          grid[{i, j}] == ?- ->
+            {count, inside?, prev}
+
+          true ->
+            IO.inspect({i, j}, label: "Coord")
+            IO.inspect(inside?, label: "Inside")
+            IO.inspect({i, j} in loop, label: "Boarder")
+            IO.inspect(prev, label: "Previous half vertical edge")
+            IO.inspect(<<grid[{i, j}]>>, label: "Current")
+            raise "Unknown Situation"
+        end
+    end
+    |> elem(0)
+end
+```
+
+<!-- livebook:{"offset":3845,"stamp":{"token":"XCP.39jWuq0Q-h9twxeQSYMfavjWhEoD6YgjJ7SLE0eG2OiDPGV44_NMM7o97DPLf1Do1PLAr86Qi7SKHhCqL9j5oGxKphUjN7RurefMGyLPsskl1tlnx9I","version":2}} -->

@@ -1,0 +1,42 @@
+# Advent of Code 2023 Day 9
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.5"}
+])
+```
+
+## Prep
+
+<!-- livebook:{"attrs":{"assign_to":"puzzle_input","day":"9","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "9", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+lines =
+  puzzle_input
+  |> String.split("\n")
+  |> Stream.map(&String.split/1)
+  |> Enum.map(&Enum.map(&1, fn s -> String.to_integer(s) end))
+```
+
+```elixir
+lines
+|> Enum.map(&Enum.reverse/1)
+|> Enum.map(fn line ->
+  line
+  |> Stream.unfold(fn line ->
+    next_line = line |> Stream.chunk_every(2, 1, :discard) |> Enum.map(fn [a, b] -> b - a end)
+    {line, next_line}
+  end)
+  |> Enum.take_while(fn line -> !Enum.all?(line, &(&1 == 0)) end)
+  |> Enum.map(fn line -> List.last(line) end)
+  |> Enum.sum()
+end)
+|> Enum.sum()
+```
+
+<!-- livebook:{"offset":940,"stamp":{"token":"XCP.sO2JXv9blBJ6PeAKpfBCIw1MAOlZSPzcsTD769VkYwGS4k-TO-8wBGc17AKTagk0cRls7fsbP7P2mFfTZDM2RKbaiNme86bx-4J1F661zuVw9-18C0Y","version":2}} -->
