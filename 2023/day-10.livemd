@@ -165,4 +165,47 @@ for i <- i_min..i_max//2, reduce: 0 do
 end
 ```
 
-<!-- livebook:{"offset":3845,"stamp":{"token":"XCP.39jWuq0Q-h9twxeQSYMfavjWhEoD6YgjJ7SLE0eG2OiDPGV44_NMM7o97DPLf1Do1PLAr86Qi7SKHhCqL9j5oGxKphUjN7RurefMGyLPsskl1tlnx9I","version":2}} -->
+## Part 2 Alternative
+
+```elixir
+defmodule Flood do
+  def flood(grid, border, {i, j}, seen) do
+    grid = Map.put(grid, {i, j}, ?~)
+    seen = MapSet.put(seen, {i, j})
+
+    [
+      {i, j - 1},
+      {i, j + 1},
+      {i - 1, j},
+      {i + 1, j}
+    ]
+    |> Enum.reduce({grid, seen}, fn neighbor, {grid, seen} ->
+      cond do
+        neighbor in seen -> {grid, seen}
+        neighbor in border -> {grid, seen}
+        true -> flood(grid, border, neighbor, seen)
+      end
+    end)
+  end
+end
+```
+
+```elixir
+{i, j} = Enum.min(loop)
+```
+
+```elixir
+{flooded, _} = Flood.flood(grid, loop, {i + 1, j + 1}, MapSet.new())
+```
+
+```elixir
+import Integer
+```
+
+```elixir
+Enum.count(flooded, fn {{i, j}, v} ->
+  is_odd(i) and is_odd(j) and v == ?~
+end)
+```
+
+<!-- livebook:{"offset":4592,"stamp":{"token":"XCP.voo9PgKvlQn2tE4vam_Em0KroKfK-c3aNEhLNxIUU0Klcwv2HfpnIav5anc6g6cdjoNv7lwTBGnBOVAbcfjOwuK6syyML93JF4XsfuJNT3QterpnhBI","version":2}} -->
