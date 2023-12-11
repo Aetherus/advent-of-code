@@ -1,0 +1,102 @@
+# Advent of Code 2023 Day 11
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.5"}
+])
+```
+
+## Prep
+
+<!-- livebook:{"attrs":{"assign_to":"puzzle_input","day":"11","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "11", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+```elixir
+galaxies =
+  puzzle_input
+  |> String.split("\n")
+  |> Stream.with_index()
+  |> Enum.flat_map(fn {line, i} ->
+    Regex.scan(~r/\#/, line, return: :index)
+    |> List.flatten()
+    |> Enum.map(&{i, elem(&1, 0)})
+  end)
+```
+
+```elixir
+i_max = galaxies |> Enum.max() |> elem(0)
+```
+
+```elixir
+j_max = galaxies |> Enum.max_by(&elem(&1, 1)) |> elem(1)
+```
+
+```elixir
+is = galaxies |> Enum.map(&elem(&1, 0)) |> MapSet.new()
+```
+
+```elixir
+js = galaxies |> Enum.map(&elem(&1, 1)) |> MapSet.new()
+```
+
+```elixir
+empty_rows = for i <- 0..i_max, i not in is, do: i
+```
+
+```elixir
+empty_cols = for j <- 0..j_max, j not in js, do: j
+```
+
+```elixir
+expand = fn galaxies, empty_rows, empty_cols, expansion_rate ->
+  galaxies
+  |> Enum.map(fn {i, j} ->
+    {
+      i + (expansion_rate - 1) * Enum.count(empty_rows, &(&1 < i)),
+      j + (expansion_rate - 1) * Enum.count(empty_cols, &(&1 < j))
+    }
+  end)
+end
+```
+
+```elixir
+manhattan = fn {i1, j1}, {i2, j2} ->
+  abs(i1 - i2) + abs(j1 - j2)
+end
+```
+
+## Part 1
+
+```elixir
+after_expansion = expand.(galaxies, empty_rows, empty_cols, 2)
+```
+
+```elixir
+for g1 <- after_expansion, g2 <- after_expansion, reduce: 0 do
+  sum -> sum + manhattan.(g1, g2)
+end
+|> div(2)
+```
+
+## Part 2
+
+```elixir
+after_expansion = expand.(galaxies, empty_rows, empty_cols, 1_000_000)
+```
+
+```elixir
+for g1 <- after_expansion, g2 <- after_expansion, reduce: 0 do
+  sum -> sum + manhattan.(g1, g2)
+end
+|> div(2)
+```
+
+<!-- livebook:{"offset":1877,"stamp":{"token":"XCP.-tJ1DWKPJTFZAuof2tW3FtSrdsjYLXgekYP-ZsUk0SQDs9Gm2q-r8I1ggpBRTxEvM7g-dXupZj9zbk7dkCkPi_2GVe_vnZqsvmjDrFJyl_EFVREuX0I","version":2}} -->
