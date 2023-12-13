@@ -1,0 +1,300 @@
+# Advent of Code 2023 Day 12
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.5"}
+])
+```
+
+## Prep
+
+<!-- livebook:{"attrs":{"assign_to":"puzzle_input","day":"12","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "12", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+```elixir
+input =
+  puzzle_input
+  |> String.split("\n")
+  |> Stream.map(&String.split(&1, " "))
+  |> Enum.map(fn [springs, counts] ->
+    {springs, counts |> String.split(",") |> Enum.map(&String.to_integer/1)}
+  end)
+```
+
+```elixir
+defmodule AoC2023.Day12 do
+  # `input` for both parts are things like
+  #
+  # [
+  #   {"#.#.###", [1,1,3]},
+  #   {".#...#....###.", [1,1,3]},
+  #   ...
+  # ]
+
+  @spec part1([{String.t(), [pos_integer()]}]) :: non_neg_integer()
+  def part1(input) do
+    input
+    |> Task.async_stream(
+      fn {springs, counts} ->
+        aux(springs, 0, ".", counts)
+      end,
+      ordered: false
+    )
+    |> Stream.map(&elem(&1, 1))
+    |> Enum.sum()
+  end
+
+  @spec part2([{String.t(), [pos_integer()]}]) :: non_neg_integer()
+  def part2(input) do
+    input
+    |> Enum.map(fn {springs, counts} ->
+      {
+        List.duplicate(springs, 5) |> Enum.join("?"),
+        List.duplicate(counts, 5) |> List.flatten()
+      }
+    end)
+    |> part1()
+  end
+
+  @spec aux(
+          springs :: String.t(),
+          index :: non_neg_integer(),
+          previous_spring :: String.t(),
+          counters :: [non_neg_integer()]
+        ) :: non_neg_integer()
+  defp aux("", _, _, []), do: 1
+
+  defp aux("", _, _, [0]), do: 1
+
+  defp aux("", _, _, _), do: 0
+
+  defp aux("#" <> _, _, _, []), do: 0
+
+  defp aux("#" <> _, _, _, [0 | _]), do: 0
+
+  defp aux("#" <> rest, i, _, [h | t]), do: aux(rest, i + 1, "#", [h - 1 | t])
+
+  defp aux("." <> rest, i, _, []), do: aux(rest, i + 1, ".", [])
+
+  defp aux("." <> rest, i, "#", [0 | t]), do: aux(rest, i + 1, ".", t)
+
+  defp aux("." <> _, _, "#", [_ | _]), do: 0
+
+  defp aux("." <> rest, i, ".", counts), do: aux(rest, i + 1, ".", counts)
+
+  defp aux("?" <> rest, i, "#", []), do: aux(rest, i + 1, ".", [])
+
+  defp aux("?" <> rest, i, "#", [0 | t]), do: aux(rest, i + 1, ".", t)
+
+  defp aux("?" <> rest, i, "#", [h | t]), do: aux(rest, i + 1, "#", [h - 1 | t])
+
+  defp aux("?" <> rest, i, ".", []), do: aux(rest, i + 1, ".", [])
+
+  defp aux("?" <> rest, i, ".", [0 | t]), do: aux(rest, i + 1, ".", t)
+
+  defp aux("?" <> rest, i, ".", [h | t]) do
+    memoized({i, [h | t]}, fn ->
+      aux(rest, i + 1, "#", [h - 1 | t]) + aux(rest, i + 1, ".", [h | t])
+    end)
+  end
+
+  defp memoized(key, fun) do
+    with nil <- Process.get(key) do
+      fun.() |> tap(&Process.put(key, &1))
+    end
+  end
+end
+```
+
+```elixir
+AoC2023.Day12.part1(input)
+```
+
+```elixir
+AoC2023.Day12.part2(input)
+```
+
+```elixir
+defmodule AoC2023.Day12.FunctionalMemoization do
+  # `input` for both parts are things like
+  #
+  # [
+  #   {"#.#.###", [1,1,3]},
+  #   {".#...#....###.", [1,1,3]},
+  #   ...
+  # ]
+
+  @spec part1([{String.t(), [pos_integer()]}]) :: non_neg_integer()
+  def part1(input) do
+    input
+    |> Task.async_stream(
+      fn {springs, counters} ->
+        # It does not change the result
+        # if we prepend a "." to each line of springs.
+        # By adding this "." I do not need to handle the
+        # edge case that the line starts with a "?".
+        aux(springs, 0, ".", counters, %{})
+      end,
+      ordered: false
+    )
+    |> Stream.map(&elem(&1, 1))
+    |> Stream.map(&elem(&1, 0))
+    |> Enum.sum()
+  end
+
+  @spec part2([{String.t(), [pos_integer()]}]) :: non_neg_integer()
+  def part2(input) do
+    input
+    |> Enum.map(fn {springs, counters} ->
+      {
+        List.duplicate(springs, 5) |> Enum.join("?"),
+        List.duplicate(counters, 5) |> List.flatten()
+      }
+    end)
+    |> part1()
+  end
+
+  @spec aux(
+          springs :: String.t(),
+          index,
+          previous_spring :: String.t(),
+          counters,
+          memo
+        ) :: {total_count, memo}
+        when index: non_neg_integer(),
+             counters: [non_neg_integer()],
+             total_count: non_neg_integer(),
+             memo: %{optional({index, counters}) => total_count}
+
+  # When we reached the end of a line,
+  # and all counters are consumed,
+  # we found a solution.
+  defp aux("", _, _, [], memo), do: {1, memo}
+
+  # When we reached the end of a line,
+  # and the last counter reaches 0,
+  # we found a solution.
+  defp aux("", _, _, [0], memo), do: {1, memo}
+
+  # When we reached the end of a line,
+  # and there is at least one non-zero counter,
+  # that's an invalid situation so no solution.
+  defp aux("", _, _, _, memo), do: {0, memo}
+
+  # When the current spring is broken,
+  # and there is no counter left,
+  # that's an invalid situation so no solution.
+  defp aux("#" <> _, _, _, [], memo), do: {0, memo}
+
+  # When the current spring is broken,
+  # and the current counter reaches 0,
+  # that's an invalid situation so no solution.
+  defp aux("#" <> _, _, _, [0 | _], memo), do: {0, memo}
+
+  # When the current spring is broken,
+  # and the current counter is not 0,
+  # decrement the counter and recursively find solutions.
+  defp aux("#" <> rest, i, _, [h | t], memo), do: aux(rest, i + 1, "#", [h - 1 | t], memo)
+
+  # When the current spring is good,
+  # and there's no counter left,
+  # try rest of the line and see if all the springs left are good.
+  defp aux("." <> rest, i, _, [], memo), do: aux(rest, i + 1, ".", [], memo)
+
+  # When the current spring is good,
+  # and the previous spring is bad,
+  # and the current counter reaches 0,
+  # we can discard that 0 and recursively find solutions.
+  defp aux("." <> rest, i, "#", [0 | t], memo), do: aux(rest, i + 1, ".", t, memo)
+
+  # When the current spring is good,
+  # and the previous spring is bad,
+  # and the current counter is not 0,
+  # that's an invalid situation so no solution.
+  defp aux("." <> _, _, "#", [_ | _], memo), do: {0, memo}
+
+  # When the current spring is good,
+  # and the previous spring is also good,
+  # and the current counter is not 0,
+  # just check the rest of the springs.
+  defp aux("." <> rest, i, ".", counters, memo), do: aux(rest, i + 1, ".", counters, memo)
+
+  # When the current spring is unknown,
+  # and the previous spring is broken,
+  # and there's no counter left,
+  # then the current spring has to be good.
+  # We still need to check the rest of the springs. 
+  defp aux("?" <> rest, i, "#", [], memo), do: aux(rest, i + 1, ".", [], memo)
+
+  # When the current spring is unknown,
+  # and the previous spring is broken,
+  # and the current counter reaches 0,
+  # then the current spring has to be good.
+  # We still need to check the rest of the springs.
+  # The zero-counter is no longer useful so we discard it.
+  defp aux("?" <> rest, i, "#", [0 | t], memo), do: aux(rest, i + 1, ".", t, memo)
+
+  # When the current spring is unknown,
+  # and the previous spring is bad,
+  # and the current counter is not 0,
+  # then the current spring has to be broken.
+  # We decrement that counter and check the rest of the springs.
+  defp aux("?" <> rest, i, "#", [h | t], memo), do: aux(rest, i + 1, "#", [h - 1 | t], memo)
+
+  # When the current spring is unknown,
+  # and the previous spring is good,
+  # and there's no counter left,
+  # then the current spring has to be good.
+  # We still need to check the rest of the springs.
+  defp aux("?" <> rest, i, ".", [], memo), do: aux(rest, i + 1, ".", [], memo)
+
+  # When the current spring is unknown,
+  # and the previous spring is good,
+  # and the current counter reaches 0,
+  # then the current spring must be good.
+  # Discard the 0 counter as usual,
+  # and check the rest of the springs.
+  defp aux("?" <> rest, i, ".", [0 | t], memo), do: aux(rest, i + 1, ".", t, memo)
+
+  # When the current spring is unknown,
+  # and the previous spring is good,
+  # and the current counter is not 0,
+  # then the current spring can be either good or bad.
+  # Try both possibilities.
+  defp aux("?" <> rest, i, ".", [h | t], memo) do
+    memoized(memo, {i, [h | t]}, fn ->
+      {a, memo} = aux(rest, i + 1, "#", [h - 1 | t], memo)
+      {b, memo} = aux(rest, i + 1, ".", [h | t], memo)
+      {a + b, memo}
+    end)
+  end
+
+  defp memoized(memo, key, fun) do
+    with nil <- Map.get(memo, key) do
+      {res, memo} = fun.()
+      memo = Map.put(memo, key, res)
+      {res, memo}
+    else
+      res -> {res, memo}
+    end
+  end
+end
+```
+
+```elixir
+AoC2023.Day12.FunctionalMemoization.part1(input)
+```
+
+```elixir
+AoC2023.Day12.FunctionalMemoization.part2(input)
+```
+
+<!-- livebook:{"offset":8611,"stamp":{"token":"XCP.mjBUDxDValnZYzw8S7vfMMorPxIasGzmHpvQnXX1jFM6nSRjxIzU280FL26Ud6lAnUV9TF6zCkdkkwbIBydSxldqRkc_3kS6tBPzjB8TjyGE9vhCbpk","version":2}} -->

@@ -1,0 +1,182 @@
+# Advent of Code 2023 Day 13
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.5"}
+])
+```
+
+## Prep
+
+<!-- livebook:{"attrs":{"assign_to":"puzzle_input","day":"13","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "13", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+```elixir
+blocks =
+  puzzle_input
+  |> String.split("\n\n")
+  |> Enum.map(fn block ->
+    block
+    |> String.split("\n")
+    |> Enum.map(&String.to_charlist/1)
+  end)
+```
+
+```elixir
+find_mirror = fn block ->
+  len = length(block)
+
+  mirror_pos =
+    block
+    |> Stream.chunk_every(2, 1, :discard)
+    |> Stream.with_index(1)
+    |> Stream.filter(fn {[a, b], _} -> a == b end)
+    |> Stream.map(&elem(&1, 1))
+    |> Enum.filter(fn
+      i when i <= div(len, 2) ->
+        Enum.take(block, i)
+        |> Enum.reverse()
+        |> Kernel.==(block |> Enum.drop(i) |> Enum.take(i))
+
+      i ->
+        Enum.drop(block, i)
+        |> Enum.reverse()
+        |> Kernel.==(block |> Enum.take(i) |> Enum.drop(i * 2 - len))
+    end)
+
+  case mirror_pos do
+    [] -> 0
+    [n] -> n
+  end
+end
+```
+
+```elixir
+horizontal =
+  for block <- blocks do
+    find_mirror.(block)
+  end
+  |> IO.inspect(charlists: :as_lists)
+```
+
+```elixir
+transposed =
+  Enum.map(blocks, fn block ->
+    Enum.zip_with(block, &Function.identity/1)
+  end)
+```
+
+```elixir
+vertical =
+  for block <- transposed do
+    find_mirror.(block)
+  end
+```
+
+```elixir
+Enum.sum(horizontal) * 100 + Enum.sum(vertical)
+```
+
+```elixir
+horizontal_fixation_candidates =
+  for block <- blocks do
+    block
+    |> Stream.chunk_every(2, 1, :discard)
+    |> Stream.with_index(1)
+    |> Enum.filter(fn {[a, b], _} ->
+      Stream.zip(a, b)
+      |> Enum.count(fn {c1, c2} -> c1 != c2 end)
+      |> Kernel.<=(1)
+    end)
+    |> Enum.map(&elem(&1, 1))
+  end
+```
+
+```elixir
+vertical_fixation_candidates =
+  for block <- transposed do
+    block
+    |> Stream.chunk_every(2, 1, :discard)
+    |> Stream.with_index(1)
+    |> Enum.filter(fn {[a, b], _} ->
+      Stream.zip(a, b)
+      |> Enum.count(fn {c1, c2} -> c1 != c2 end)
+      |> Kernel.<=(1)
+    end)
+    |> Enum.map(&elem(&1, 1))
+  end
+```
+
+```elixir
+horizontal2 =
+  blocks
+  |> Stream.zip(horizontal_fixation_candidates)
+  |> Enum.map(fn {block, candidates} ->
+    len = length(block)
+
+    candidates
+    |> Enum.find(0, fn
+      i when i <= div(len, 2) ->
+        block
+        |> Enum.take(i)
+        |> Enum.reverse()
+        |> List.flatten()
+        |> Enum.zip(block |> Enum.drop(i) |> Enum.take(i) |> List.flatten())
+        |> Enum.count(fn {a, b} -> a != b end)
+        |> Kernel.==(1)
+
+      i ->
+        block
+        |> Enum.drop(i)
+        |> Enum.reverse()
+        |> List.flatten()
+        |> Enum.zip(block |> Enum.take(i) |> Enum.drop(i * 2 - len) |> List.flatten())
+        |> Enum.count(fn {a, b} -> a != b end)
+        |> Kernel.==(1)
+    end)
+  end)
+```
+
+```elixir
+vertical2 =
+  transposed
+  |> Stream.zip(vertical_fixation_candidates)
+  |> Enum.map(fn {block, candidates} ->
+    len = length(block)
+
+    candidates
+    |> Enum.find(0, fn
+      i when i <= div(len, 2) ->
+        block
+        |> Enum.take(i)
+        |> Enum.reverse()
+        |> List.flatten()
+        |> Enum.zip(block |> Enum.drop(i) |> Enum.take(i) |> List.flatten())
+        |> Enum.count(fn {a, b} -> a != b end)
+        |> Kernel.==(1)
+
+      i ->
+        block
+        |> Enum.drop(i)
+        |> Enum.reverse()
+        |> List.flatten()
+        |> Enum.zip(block |> Enum.take(i) |> Enum.drop(i * 2 - len) |> List.flatten())
+        |> Enum.count(fn {a, b} -> a != b end)
+        |> Kernel.==(1)
+    end)
+  end)
+```
+
+```elixir
+Enum.sum(horizontal2) * 100 + Enum.sum(vertical2)
+```
+
+<!-- livebook:{"offset":3806,"stamp":{"token":"XCP.GtUAmruZsDidkpNTQ4ZUwYKCCGDySzDcS6aFDCmLWTy6aW8gQiiva3XrgZcjzUC_PqzPadzRN0vUceGqRLEIFoy5vNhHxDqtfKrHMFD9jkUdK526n_M","version":2}} -->

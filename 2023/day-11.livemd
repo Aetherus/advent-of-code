@@ -99,4 +99,4 @@ end
 |> div(2)
 ```
 
-<!-- livebook:{"offset":1877,"stamp":{"token":"XCP.-tJ1DWKPJTFZAuof2tW3FtSrdsjYLXgekYP-ZsUk0SQDs9Gm2q-r8I1ggpBRTxEvM7g-dXupZj9zbk7dkCkPi_2GVe_vnZqsvmjDrFJyl_EFVREuX0I","version":2}} -->
+<!-- livebook:{"offset":1877,"stamp":{"token":"XCP.a7DOjwElPWbIhHU_Io_0ij0YL2Hi3entLepQ5O-TqIBG_qzCLxqzgRrrkvpzwRLDdj86_i_U2b12u6zN1Qce9b_-TDGJ05nj9AMJCg3AQ15eu2qeX8I","version":2}} -->
