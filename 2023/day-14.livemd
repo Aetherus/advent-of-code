@@ -101,10 +101,10 @@ end
 ```
 
 ```elixir
-loop_start =
+before_enter_loop =
   {dish, MapSet.new()}
-  |> Stream.unfold(fn {dish, seen} ->
-    {{dish, seen}, {cycle.(dish), MapSet.put(seen, dish)}}
+  |> Stream.iterate(fn {dish, seen} ->
+    {cycle.(dish), MapSet.put(seen, dish)}
   end)
   |> Enum.find_index(fn {dish, seen} -> dish in seen end)
 ```
@@ -113,7 +113,7 @@ loop_start =
 loop_length =
   dish
   |> Stream.iterate(cycle)
-  |> Stream.drop(loop_start)
+  |> Stream.drop(before_enter_loop)
   |> Enum.reduce_while(MapSet.new(), fn dish, seen ->
     if dish in seen do
       {:halt, seen}
@@ -121,18 +121,18 @@ loop_length =
       {:cont, MapSet.put(seen, dish)}
     end
   end)
-  |> Enum.count()
+  |> MapSet.size()
 ```
 
 ```elixir
-remainder = rem(1_000_000_000 - loop_start + loop_length, loop_length)
+remainder = rem(1_000_000_000 - before_enter_loop + loop_length, loop_length)
 ```
 
 ```elixir
 dish
 |> Stream.iterate(cycle)
-|> Enum.at(loop_start - loop_length + remainder)
+|> Enum.at(before_enter_loop - loop_length + remainder)
 |> load.()
 ```
 
-<!-- livebook:{"offset":2153,"stamp":{"token":"XCP.lMc-YthoeDW5HfDMj6lBTtUaF7r6bE03z9dq32v41xU8zeIFkLIZXu_inDL0S7SBz6ay-gBYSAacYHmOTEuJdoJbR4d-XEDpgL8o-E5sMBWX9pdrXYQ","version":2}} -->
+<!-- livebook:{"offset":2167,"stamp":{"token":"XCP.8oty9yjyAor9wToG1Jh77GyDnSjiST1CdfHjFXIDZjI3oKsWvFcCGwj4Md410fGI-UKgcDAq_KnHmuRDDE0njnQ1I2Zr2s3DFjQ4EkOWj7FRnocBkvU","version":2}} -->
