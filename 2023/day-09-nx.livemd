@@ -70,6 +70,21 @@ Solve this equation, and you got all the coefficients.
 
 After you got all the efficients, then you just pick the next $$x$$, calculate all the powers of it, dot product the coefficients, and you got the answer.
 
+For example, as for the previous example, when you got all the coefficients, you can work out the next number simply by calculating
+
+$$
+\begin{bmatrix}
+7^0 & 7^1 & 7^2 & 7^3 & 7^4 & 7^5
+\end{bmatrix} \begin{bmatrix}
+a_0 \\
+a_1 \\
+a_2 \\
+a_3 \\
+a_4 \\
+a_5
+\end{bmatrix}
+$$
+
 ## Prep
 
 <!-- livebook:{"attrs":{"assign_to":"actual_input","day":"9","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
@@ -159,4 +174,4 @@ vec_x =
 vec_x |> Nx.dot(coeffs) |> Nx.sum() |> Nx.to_number()
 ```
 
-<!-- livebook:{"offset":4090,"stamp":{"token":"XCP.PPKnjXxm4ktr9BolgHQfTEA3FXgiwLW4Q5aVEkjfpyRJeNW9k5kwquSTs2W5X5yO3B0ZRb4XDLhjAsCHjuJLoH_HJingrXf8fGLxk0906N7V5qXmqeE","version":2}} -->
+<!-- livebook:{"offset":4363,"stamp":{"token":"XCP.lg9dXDuGn01hLOhLOjs4h_zF3MWIMQeorcOkYSQ8lA1Chk_D81eEu_vJrHMKCKUiYtgVmG1ESWNN6AHrjgabW97OD3N1imFIlR4Do8i-nNEmsT6Gofk","version":2}} -->
