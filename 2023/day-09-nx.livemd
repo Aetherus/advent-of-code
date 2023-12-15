@@ -18,7 +18,9 @@ For example, as for the sample input `10 13 16 21 30 45`, there are 6 terms, and
 
 We can write such an polynomial as
 
-$$ a_0 x^0 + a_1 x^1 + a_2 x^2 + ... + a_n x^n $$
+$$
+y = a_0 x^0 + a_1 x^1 + a_2 x^2 + ... + a_n x^n
+$$
 
 where $$n$$ is the number of terms minus 1.
 
@@ -157,4 +159,4 @@ vec_x =
 vec_x |> Nx.dot(coeffs) |> Nx.sum() |> Nx.to_number()
 ```
 
-<!-- livebook:{"offset":4086,"stamp":{"token":"XCP.82RtdMaCbvSfap3LMEoczAtvzXgF42OCF6aEP00s6qfcbWmbCMjjeZhVzZ6TkDwo9lxva0u3AZzpIuw6CBYhgW0T9M-7U7FZqEOzdBNGYi8aLug0oI4","version":2}} -->
+<!-- livebook:{"offset":4090,"stamp":{"token":"XCP.PPKnjXxm4ktr9BolgHQfTEA3FXgiwLW4Q5aVEkjfpyRJeNW9k5kwquSTs2W5X5yO3B0ZRb4XDLhjAsCHjuJLoH_HJingrXf8fGLxk0906N7V5qXmqeE","version":2}} -->
