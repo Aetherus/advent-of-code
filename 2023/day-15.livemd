@@ -1,0 +1,98 @@
+# Advent of Code 2023 Day 15
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.5"}
+])
+```
+
+## Prep
+
+<!-- livebook:{"attrs":{"assign_to":"puzzle_input","day":"15","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "15", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+```elixir
+import Bitwise
+```
+
+```elixir
+hash = fn string ->
+  for <<char <- string>>, reduce: 0 do
+    acc -> ((acc + char) <<< 4) + acc + char &&& 0xFF
+  end
+end
+```
+
+```elixir
+puzzle_input
+|> String.split(",")
+|> Enum.map(hash)
+|> Enum.sum()
+```
+
+```elixir
+instructions =
+  puzzle_input
+  |> String.split(",")
+  |> Enum.map(fn instruction ->
+    if String.ends_with?(instruction, "-") do
+      key = String.trim_trailing(instruction, "-")
+      hkey = hash.(key)
+
+      fn boxes ->
+        {box, next_slot} = boxes[hkey]
+        box = Map.delete(box, key)
+        %{boxes | hkey => {box, next_slot}}
+      end
+    else
+      [key, n] = String.split(instruction, "=")
+      hkey = hash.(key)
+      n = String.to_integer(n)
+
+      fn boxes ->
+        {box, next_slot} = boxes[hkey]
+
+        updated_box =
+          Map.update(box, key, {n, next_slot}, fn {_, old_slot} ->
+            {n, old_slot}
+          end)
+
+        %{boxes | hkey => {updated_box, next_slot + 1}}
+      end
+    end
+  end)
+```
+
+```elixir
+boxes = Map.new(0..255, &{&1, {%{}, 1}})
+```
+
+```elixir
+updated_boxes =
+  instructions
+  |> Enum.reduce(boxes, & &1.(&2))
+  |> Enum.map(fn {hkey, {box, _}} ->
+    box
+    |> Map.values()
+    |> Enum.sort_by(&elem(&1, 1))
+    |> Enum.map(&elem(&1, 0))
+    |> Enum.with_index(1)
+    |> then(&{hkey, &1})
+  end)
+```
+
+```elixir
+for {hkey, box} <- updated_boxes, {n, i} <- box, reduce: 0 do
+  sum -> sum + (hkey + 1) * n * i
+end
+```
+
+<!-- livebook:{"offset":1880,"stamp":{"token":"XCP.Jc5R4C2h61qOISuAX93ICnAltc9pYGOBjss_6T6e5L0cqC7ohq4bwzzSFFWL45OzZmWX5AynQPyK9cmpojvYVJZhUh3TJDEtyCS9nBEUBbax_VFaCRE","version":2}} -->
