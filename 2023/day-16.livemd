@@ -1,0 +1,122 @@
+# Advent of Code 2023 Day 16
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.5"}
+])
+```
+
+## Prep
+
+<!-- livebook:{"attrs":{"assign_to":"puzzle_input","day":"16","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "16", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+grid =
+  for {row, i} <- puzzle_input |> String.split() |> Stream.with_index(),
+      {val, j} <- row |> String.to_charlist() |> Stream.with_index(),
+      into: %{},
+      do: {{i, j}, val}
+```
+
+```elixir
+defmodule AoC2023.Day16 do
+  def part1(grid) do
+    shoot(grid, {0, 0}, {0, 1}, MapSet.new())
+    |> count_energized()
+  end
+
+  def part2(grid) do
+    {max_i, max_j} = grid |> Map.keys() |> Enum.max()
+
+    count =
+      0..max_i
+      |> Enum.map(&{&1, 0})
+      |> Task.async_stream(&count_energized(shoot(grid, &1, {0, 1}, MapSet.new())),
+        ordered: false
+      )
+      |> Enum.max()
+
+    count =
+      0..max_i
+      |> Enum.map(&{&1, max_j})
+      |> Task.async_stream(&count_energized(shoot(grid, &1, {0, -1}, MapSet.new())),
+        ordered: false
+      )
+      |> Enum.reduce(count, &max/2)
+
+    count =
+      0..max_j
+      |> Enum.map(&{0, &1})
+      |> Task.async_stream(&count_energized(shoot(grid, &1, {1, 0}, MapSet.new())),
+        ordered: false
+      )
+      |> Enum.reduce(count, &max/2)
+
+    count =
+      0..max_j
+      |> Enum.map(&{max_i, &1})
+      |> Task.async_stream(&count_energized(shoot(grid, &1, {-1, 0}, MapSet.new())),
+        ordered: false
+      )
+      |> Enum.reduce(count, &max/2)
+
+    elem(count, 1)
+  end
+
+  defp count_energized(set) do
+    set
+    |> Enum.map(&elem(&1, 0))
+    |> Enum.uniq()
+    |> length()
+  end
+
+  defp shoot(grid, {i, j} = position, {di, dj} = direction, acc) do
+    if {position, direction} in acc do
+      acc
+    else
+      case grid[position] do
+        nil ->
+          acc
+
+        ?. ->
+          shoot(grid, {i + di, j + dj}, direction, MapSet.put(acc, {position, direction}))
+
+        ?\\ ->
+          shoot(grid, {i + dj, j + di}, {dj, di}, MapSet.put(acc, {position, direction}))
+
+        ?/ ->
+          shoot(grid, {i - dj, j - di}, {-dj, -di}, MapSet.put(acc, {position, direction}))
+
+        ?- when di == 0 ->
+          shoot(grid, {i + di, j + dj}, direction, MapSet.put(acc, {position, direction}))
+
+        ?| when dj == 0 ->
+          shoot(grid, {i + di, j + dj}, direction, MapSet.put(acc, {position, direction}))
+
+        ?- ->
+          acc = shoot(grid, {i, j - 1}, {0, -1}, MapSet.put(acc, {position, direction}))
+          shoot(grid, {i, j + 1}, {0, 1}, MapSet.put(acc, {position, direction}))
+
+        ?| ->
+          acc = shoot(grid, {i - 1, j}, {-1, 0}, MapSet.put(acc, {position, direction}))
+          shoot(grid, {i + 1, j}, {1, 0}, MapSet.put(acc, {position, direction}))
+      end
+    end
+  end
+end
+```
+
+```elixir
+AoC2023.Day16.part1(grid)
+```
+
+```elixir
+AoC2023.Day16.part2(grid)
+```
+
+<!-- livebook:{"offset":3009,"stamp":{"token":"XCP.YDQ4JejbYz7x3QQPSqyF9wMPozF8xKcEG2jhXD9mctXH4USIGNkwnvtDRZKXwvrQWci8sj71NjlzeGL5TLZJeXXq3FtOjze_DIj_AozuMFoBguj42KI","version":2}} -->
