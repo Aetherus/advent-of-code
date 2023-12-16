@@ -118,11 +118,18 @@ lines =
 ```
 
 ```elixir
-terms = length(hd(lines))
+Nx.default_backend(EXLA.Backend)
 ```
 
 ```elixir
-Nx.default_backend(EXLA.Backend)
+mat_y =
+  lines
+  |> Nx.tensor(type: :f64)
+  |> Nx.transpose()
+```
+
+```elixir
+{terms, _} = Nx.shape(mat_y)
 ```
 
 ```elixir
@@ -131,13 +138,6 @@ mat_x =
     1 |> Stream.iterate(&(&1 * x)) |> Enum.take(terms)
   end
   |> Nx.tensor(type: :f64)
-```
-
-```elixir
-mat_y =
-  lines
-  |> Nx.tensor(type: :f64)
-  |> Nx.transpose()
 ```
 
 ```elixir
@@ -174,4 +174,4 @@ vec_x =
 vec_x |> Nx.dot(coeffs) |> Nx.sum() |> Nx.to_number()
 ```
 
-<!-- livebook:{"offset":4363,"stamp":{"token":"XCP.lg9dXDuGn01hLOhLOjs4h_zF3MWIMQeorcOkYSQ8lA1Chk_D81eEu_vJrHMKCKUiYtgVmG1ESWNN6AHrjgabW97OD3N1imFIlR4Do8i-nNEmsT6Gofk","version":2}} -->
+<!-- livebook:{"offset":4366,"stamp":{"token":"XCP.8IepaZTZJzhsKEXe641cwavv7KMVe2btXGQZuV6GeIm6MRb_259VqFdUKa502A2q631Mrc1CVFYRRa6_OwwFLBM-Tyno9grGPG9EctkiB8XDOKEZI_g","version":2}} -->
