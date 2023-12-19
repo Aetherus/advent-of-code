@@ -1,0 +1,219 @@
+# Advent of Code 2023 Day 17
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.5"}
+])
+```
+
+## Section
+
+<!-- livebook:{"attrs":{"assign_to":"real_input","day":"17","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, real_input} =
+  KinoAOC.download_puzzle("2023", "17", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+test_input =
+  """
+  2413432311323
+  3215453535623
+  3255245654254
+  3446585845452
+  4546657867536
+  1438598798454
+  4457876987766
+  3637877979653
+  4654967986887
+  4564679986453
+  1224686865563
+  2546548887735
+  4322674655533
+  """
+  |> String.trim()
+```
+
+```elixir
+puzzle_input = real_input
+```
+
+```elixir
+grid =
+  for {row, i} <- puzzle_input |> String.split("\n") |> Stream.with_index(),
+      {val, j} <- row |> String.to_charlist() |> Stream.with_index(),
+      into: %{},
+      do: {{i, j}, val - ?0}
+```
+
+```elixir
+defmodule AoC2023.Day17 do
+  @spec part1(%{coord => loss}) :: total_loss
+        when coord: {i :: non_neg_integer(), j :: non_neg_integer()},
+             loss: pos_integer(),
+             total_loss: pos_integer()
+  def part1(grid) do
+    {dest, _} = Enum.max(grid)
+
+    :gb_sets.empty()
+    |> enqueue(grid[{0, 1}] + manhattan({0, 1}, dest), {grid[{0, 1}], {{0, 1}, {0, 1, 1}}})
+    |> enqueue(grid[{1, 0}] + manhattan({1, 0}, dest), {grid[{1, 0}], {{1, 0}, {1, 0, 1}}})
+    |> total_loss_p1(
+      grid,
+      dest,
+      MapSet.new([
+        {{0, 1}, {0, 1, 1}},
+        {{1, 0}, {1, 0, 1}}
+      ])
+    )
+  end
+
+  @spec part2(%{coord => loss}) :: total_loss
+        when coord: {i :: non_neg_integer(), j :: non_neg_integer()},
+             loss: pos_integer(),
+             total_loss: pos_integer()
+  def part2(grid) do
+    {dest, _} = Enum.max(grid)
+
+    :gb_sets.empty()
+    |> enqueue(grid[{0, 1}] + manhattan({0, 1}, dest), {grid[{0, 1}], {{0, 1}, {0, 1, 1}}})
+    |> enqueue(grid[{1, 0}] + manhattan({1, 0}, dest), {grid[{1, 0}], {{1, 0}, {1, 0, 1}}})
+    |> total_loss_p2(
+      grid,
+      dest,
+      MapSet.new([
+        {{0, 1}, {0, 1, 1}},
+        {{1, 0}, {1, 0, 1}}
+      ])
+    )
+  end
+
+  defp total_loss_p1(pq, grid, {max_i, max_j} = dest, seen) do
+    case dequeue(pq) do
+      {{loss, {^dest, _}}, _pq} ->
+        loss
+
+      {{loss, {{i, j}, {di, dj, steps}}}, pq} ->
+        {i2, j2} = {i + dj, j - di}
+        pds = {{i2, j2}, {dj, -di, 1}}
+
+        {pq, seen} =
+          if i2 in 0..max_i and j2 in 0..max_j and pds not in seen do
+            {enqueue(
+               pq,
+               grid[{i2, j2}] + loss + manhattan({i2, j2}, dest),
+               {grid[{i2, j2}] + loss, pds}
+             ), MapSet.put(seen, pds)}
+          else
+            {pq, seen}
+          end
+
+        {i2, j2} = {i - dj, j + di}
+        pds = {{i2, j2}, {-dj, di, 1}}
+
+        {pq, seen} =
+          if i2 in 0..max_i and j2 in 0..max_j and pds not in seen do
+            {enqueue(
+               pq,
+               grid[{i2, j2}] + loss + manhattan({i2, j2}, dest),
+               {grid[{i2, j2}] + loss, pds}
+             ), MapSet.put(seen, pds)}
+          else
+            {pq, seen}
+          end
+
+        {i2, j2} = {i + di, j + dj}
+        pds = {{i2, j2}, {di, dj, steps + 1}}
+
+        {pq, seen} =
+          if steps < 3 and i2 in 0..max_i and j2 in 0..max_j and pds not in seen do
+            {enqueue(
+               pq,
+               grid[{i2, j2}] + loss + manhattan({i2, j2}, dest),
+               {grid[{i2, j2}] + loss, pds}
+             ), MapSet.put(seen, pds)}
+          else
+            {pq, seen}
+          end
+
+        total_loss_p1(pq, grid, dest, seen)
+    end
+  end
+
+  defp total_loss_p2(pq, grid, {max_i, max_j} = dest, seen) do
+    case dequeue(pq) do
+      {{loss, {^dest, _}}, _pq} ->
+        loss
+
+      {{loss, {{i, j}, {di, dj, steps}}}, pq} ->
+        {i2, j2} = {i + dj, j - di}
+        pds = {{i2, j2}, {dj, -di, 1}}
+
+        {pq, seen} =
+          if steps >= 4 and i2 in 0..max_i and j2 in 0..max_j and pds not in seen do
+            {enqueue(
+               pq,
+               grid[{i2, j2}] + loss + manhattan({i2, j2}, dest),
+               {grid[{i2, j2}] + loss, pds}
+             ), MapSet.put(seen, pds)}
+          else
+            {pq, seen}
+          end
+
+        {i2, j2} = {i - dj, j + di}
+        pds = {{i2, j2}, {-dj, di, 1}}
+
+        {pq, seen} =
+          if steps >= 4 and i2 in 0..max_i and j2 in 0..max_j and pds not in seen do
+            {enqueue(
+               pq,
+               grid[{i2, j2}] + loss + manhattan({i2, j2}, dest),
+               {grid[{i2, j2}] + loss, pds}
+             ), MapSet.put(seen, pds)}
+          else
+            {pq, seen}
+          end
+
+        {i2, j2} = {i + di, j + dj}
+        pds = {{i2, j2}, {di, dj, steps + 1}}
+
+        {pq, seen} =
+          if steps < 10 and i2 in 0..max_i and j2 in 0..max_j and pds not in seen do
+            {enqueue(
+               pq,
+               grid[{i2, j2}] + loss + manhattan({i2, j2}, dest),
+               {grid[{i2, j2}] + loss, pds}
+             ), MapSet.put(seen, pds)}
+          else
+            {pq, seen}
+          end
+
+        total_loss_p2(pq, grid, dest, seen)
+    end
+  end
+
+  defp enqueue(pq, priority, item) do
+    :gb_sets.insert({priority, item}, pq)
+  end
+
+  defp dequeue(pq) do
+    {{_priority, item}, pq} = :gb_sets.take_smallest(pq)
+    {item, pq}
+  end
+
+  defp manhattan({i1, j1}, {i2, j2}) do
+    abs(i1 - i2) + abs(j1 - j2)
+  end
+end
+```
+
+```elixir
+AoC2023.Day17.part1(grid)
+```
+
+```elixir
+AoC2023.Day17.part2(grid)
+```
+
+<!-- livebook:{"offset":5523,"stamp":{"token":"XCP.QAi3H8OxMiWQu6pgzy1GOY4ju1z-TEmybkV-XsuJTcv35d9iEWGBTCdkwgaatPlP1WlSJwtfK4XMB4CoapgqQ12tSST4SxofS0YMxOR76SrHQv4queM","version":2}} -->

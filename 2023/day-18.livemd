@@ -1,0 +1,151 @@
+# Advent of Code 2023 Day 18
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.5"},
+  {:nx, "~> 0.6.4"},
+  {:exla, "~> 0.6.4"}
+])
+```
+
+## Prep
+
+<!-- livebook:{"attrs":{"assign_to":"real_input","day":"18","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, real_input} =
+  KinoAOC.download_puzzle("2023", "18", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+test_input =
+  """
+  R 6 (#70c710)
+  D 5 (#0dc571)
+  L 2 (#5713f0)
+  D 2 (#d2c081)
+  R 2 (#59c680)
+  D 2 (#411b91)
+  L 5 (#8ceee2)
+  U 2 (#caa173)
+  L 1 (#1b58a2)
+  U 2 (#caa171)
+  R 2 (#7807d2)
+  U 3 (#a77fa3)
+  L 2 (#015232)
+  U 2 (#7a21e3)
+  """
+  |> String.trim()
+```
+
+```elixir
+puzzle_input = real_input
+```
+
+## Part 1
+
+```elixir
+actions =
+  puzzle_input
+  |> String.split("\n")
+  |> Enum.map(fn line ->
+    line |> String.split(" ", parts: 3, trim: true) |> Enum.take(2)
+  end)
+  |> Enum.map(fn [dir, meters] ->
+    {dir, String.to_integer(meters)}
+  end)
+```
+
+```elixir
+directions = %{
+  "L" => {0, -1},
+  "R" => {0, 1},
+  "U" => {-1, 0},
+  "D" => {1, 0}
+}
+```
+
+```elixir
+vertices =
+  for {dir, meters} <- actions,
+      reduce: [{0, 0}] do
+    [{i, j} | _] = acc ->
+      {di, dj} = directions[dir]
+      next_pos = {i + di * meters, j + dj * meters}
+      [next_pos | acc]
+  end
+```
+
+```elixir
+area =
+  vertices
+  |> Stream.chunk_every(2, 1, :discard)
+  |> Stream.map(fn [{i1, j1}, {i2, j2}] ->
+    (i1 - i2) * (j1 + j2)
+  end)
+  |> Enum.sum()
+  |> div(2)
+  |> abs()
+```
+
+```elixir
+perimeter = actions |> Enum.map(&elem(&1, 1)) |> Enum.sum()
+```
+
+```elixir
+area + div(perimeter, 2) + 1
+```
+
+Expected: 46359
+
+## Part 2
+
+```elixir
+directions = %{
+  0 => {0, 1},
+  1 => {1, 0},
+  2 => {0, -1},
+  3 => {-1, 0}
+}
+```
+
+```elixir
+actions =
+  Regex.scan(~r/\b([0-9a-f]{5})([0-3])\b/m, puzzle_input, capture: :all_but_first)
+  |> Enum.map(fn [hex, dir] ->
+    {String.to_integer(dir), String.to_integer(hex, 16)}
+  end)
+```
+
+```elixir
+vertices =
+  for {dir, meters} <- actions,
+      reduce: [{0, 0}] do
+    [{i, j} | _] = acc ->
+      {di, dj} = directions[dir]
+      next_pos = {i + di * meters, j + dj * meters}
+      [next_pos | acc]
+  end
+```
+
+```elixir
+area =
+  vertices
+  |> Stream.chunk_every(2, 1, :discard)
+  |> Stream.map(fn [{i1, j1}, {i2, j2}] ->
+    i1 * j2 - i2 * j1
+  end)
+  |> Enum.sum()
+  |> div(2)
+  |> abs()
+```
+
+```elixir
+perimeter = actions |> Enum.map(&elem(&1, 1)) |> Enum.sum()
+```
+
+```elixir
+area + div(perimeter, 2) + 1
+```
+
+<!-- livebook:{"offset":2506,"stamp":{"token":"XCP.KncuKkXfhcfKc42wal3pGn65AMfOOj7DobrLHRREJyyZj9HdvBsq-ZjKYPr2lPFNl4JVrNZJBhg0RlxQcKKgFgBeTGWL3W1t8TNeqBxdUNoPy9x2BwU","version":2}} -->
