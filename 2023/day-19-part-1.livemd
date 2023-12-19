@@ -1,0 +1,206 @@
+# Advent of Code 2023 Day 19 Part 1
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.5"}
+])
+```
+
+## Section
+
+```elixir
+test_input =
+  """
+  px{a<2006:qkq,m>2090:A,rfg}
+  pv{a>1716:R,A}
+  lnx{m>1548:A,A}
+  rfg{s<537:gd,x>2440:R,A}
+  qs{s>3448:A,lnx}
+  qkq{x<1416:A,crn}
+  crn{x>2662:A,R}
+  in{s<1351:px,qqz}
+  qqz{s>2770:qs,m<1801:hdj,R}
+  gd{a>3333:R,R}
+  hdj{m>838:A,pv}
+
+  {x=787,m=2655,a=1222,s=2876}
+  {x=1679,m=44,a=2067,s=496}
+  {x=2036,m=264,a=79,s=2244}
+  {x=2461,m=1339,a=466,s=291}
+  {x=2127,m=1623,a=2188,s=1013}
+  """
+  |> String.trim()
+```
+
+<!-- livebook:{"attrs":{"assign_to":"real_input","day":"19","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, real_input} =
+  KinoAOC.download_puzzle("2023", "19", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+puzzle_input = real_input
+```
+
+```elixir
+[specs, xmases] =
+  puzzle_input
+  |> String.split("\n\n", parts: 2)
+  |> Enum.map(&String.split(&1, "\n"))
+```
+
+```elixir
+xmases =
+  xmases
+  |> Enum.map(fn xmas ->
+    xmas
+    |> String.replace(~r/([xmas])/, ~S["\1"])
+    |> String.replace("=", "=>")
+    |> then(&"%#{&1}")
+    |> Code.eval_string()
+    |> elem(0)
+  end)
+```
+
+```elixir
+defmodule Acceptor do
+  use GenServer
+
+  def start_link() do
+    GenServer.start_link(__MODULE__, 0, name: :A)
+  end
+
+  @impl true
+  def init(state) do
+    {:ok, state}
+  end
+
+  @impl true
+  def handle_cast({:handle, xmas}, sum) do
+    xmas
+    |> Map.values()
+    |> Enum.sum()
+    |> then(&{:noreply, &1 + sum})
+  end
+
+  @impl true
+  def handle_call(:get, _from, state) do
+    {:reply, state, state}
+  end
+end
+```
+
+```elixir
+defmodule Rejector do
+  use GenServer
+
+  def start_link() do
+    GenServer.start_link(__MODULE__, nil, name: :R)
+  end
+
+  @impl true
+  def init(state) do
+    {:ok, state}
+  end
+
+  @impl true
+  def handle_cast({:handle, _xmas}, state) do
+    {:noreply, state}
+  end
+end
+```
+
+```elixir
+defmodule Pipe do
+  use GenServer
+
+  def start_link(spec) do
+    {name, rules} = parse_spec(spec)
+    GenServer.start_link(__MODULE__, rules, name: name)
+  end
+
+  @impl true
+  def init(rules) do
+    {:ok, rules}
+  end
+
+  @impl true
+  def handle_cast({:handle, xmas}, rules) do
+    rules
+    |> Stream.map(& &1.(xmas))
+    |> Enum.find(&(&1 == :halt))
+
+    {:noreply, rules}
+  end
+
+  defp parse_spec(spec) do
+    [name, rules] =
+      ~r/^(\w+)\{(.*)\}$/
+      |> Regex.run(spec, capture: :all_but_first)
+
+    name = String.to_atom(name)
+
+    rules =
+      rules
+      |> String.split(",")
+      |> Enum.map(&parse_rule/1)
+
+    {name, rules}
+  end
+
+  defp parse_rule(rule) do
+    case Regex.split(~r/\W/, rule, trim: true, include_captures: true) do
+      [next] ->
+        next = String.to_atom(next)
+
+        fn xmas ->
+          GenServer.cast(next, {:handle, xmas})
+          :halt
+        end
+
+      [key, comp, thres, ":", next] ->
+        thres = String.to_integer(thres)
+        next = String.to_atom(next)
+
+        fn xmas ->
+          if compare(comp, thres, xmas[key]) do
+            GenServer.cast(next, {:handle, xmas})
+            :halt
+          else
+            :cont
+          end
+        end
+    end
+  end
+
+  defp compare("<", thres, num), do: num < thres
+  defp compare(">", thres, num), do: num > thres
+end
+```
+
+```elixir
+Acceptor.start_link()
+```
+
+```elixir
+Rejector.start_link()
+```
+
+```elixir
+for spec <- specs do
+  Pipe.start_link(spec)
+end
+```
+
+```elixir
+for xmas <- xmases do
+  GenServer.cast(:in, {:handle, xmas})
+end
+```
+
+```elixir
+GenServer.call(:A, :get)
+```
+
+<!-- livebook:{"offset":3546,"stamp":{"token":"XCP.hmfHoGvcqhyZ6tfUGz-dJ4TLMr_v_v0pYmOdF67gNNL9UO-BB6awdvJhsIZDQU0WfFUpiz31zso63iadxRFZN4AtKaq9V6oF1W2mhe_nrC16_PKbNjc","version":2}} -->
