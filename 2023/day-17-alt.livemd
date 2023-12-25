@@ -1,0 +1,410 @@
+# Advent of Code 2023 Day 17 Alternative
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.5"}
+])
+```
+
+## Section
+
+```elixir
+defmodule PairingHeap do
+  @moduledoc """
+  Pairing heap storing key-value pairs sorted by key.
+  there's no guarantee of the order of the pairs with the same key.
+
+  ### Performance
+
+  - `new/0`: O(1)
+  - `insert/3`: O(1)
+  - `delete_min/1`: Amortized O(log n)
+  - `top/1`: O(1)
+  """
+
+  @opaque t(key, value) :: empty_heap() | non_empty_heap(key, value)
+  @opaque empty_heap() :: nil
+  @opaque non_empty_heap(key, value) :: {key, value, [non_empty_heap(key, value)]}
+
+  @doc """
+  Creates an empty pairing heap.
+  """
+  @spec new() :: empty_heap()
+  def new(), do: nil
+
+  @doc """
+  Insert a key-value pair into the heap.
+  """
+  @spec insert(t(key, value), key, value) :: t(key, value)
+        when key: any(), value: any()
+  def insert(heap, key, value) do
+    meld(heap, {key, value, []})
+  end
+
+  @doc """
+  Deletes the key-value pair with the smallest key from the heap.
+  If there are multiple pairs with the same smallest key,
+  it's not deterministic which pair will be deleted.
+
+  ### Return value
+
+  If the heap is empty, returns `{:error, :empty, original_heap}`,
+  otherwise returns `{:ok, {deleted_key, deleted_value}, updated_heap}`.
+  """
+  @spec delete_min(t(key, value)) ::
+          {:ok, {key, value}, t(key, value)} | {:error, :empty, empty_heap()}
+        when key: any(), value: any()
+  def delete_min(nil) do
+    {:error, :empty, nil}
+  end
+
+  def delete_min({k, v, children}) do
+    {:ok, {k, v}, pair(children)}
+  end
+
+  @doc """
+  Gets the key-value pair with the smallest key from the heap.
+  If there are multiple pairs with the same smallest key,
+  it's not deterministic which pair will be returned.
+
+  ### Return value
+
+  If the heap is empty, returns `{:error, :empty}`,
+  otherwise returns `{:ok, {key, value}}`.
+  """
+  @spec top(t(key, value)) :: {:ok, {key, value}} | {:error, :empty}
+        when key: any(), value: any()
+  def top(nil) do
+    {:error, :empty}
+  end
+
+  def top({k, v, _}) do
+    {:ok, {k, v}}
+  end
+
+  @spec pair([t(key, value)]) :: t(key, value)
+        when key: any(), value: any()
+  defp pair([]), do: nil
+
+  defp pair([h]), do: h
+
+  defp pair([h1, h2 | t]) do
+    meld(meld(h1, h2), pair(t))
+  end
+
+  @spec meld(t(key, value), t(key, value)) :: t(key, value)
+        when key: any(),
+             value: any()
+  defp meld(nil, heap), do: heap
+
+  defp meld(heap, nil), do: heap
+
+  defp meld({k1, v1, c1} = h1, {k2, v2, c2} = h2) do
+    if k1 < k2 do
+      {k1, v1, [h2 | c1]}
+    else
+      {k2, v2, [h1 | c2]}
+    end
+  end
+end
+```
+
+```elixir
+defmodule PriorityQueue do
+  @moduledoc """
+  A priority queue implementation based on pairing heap
+  that provides
+
+  - an amortized O(log n) soft deletion mechanism.
+  - an amortized O(log n) decrease-key operation (which is called `decrease_nicety` in the API).
+  """
+
+  alias PairingHeap, as: H
+
+  @opaque t(item) :: {
+            insertions :: H.t(integer(), item),
+            deletions :: H.t(integer(), item)
+          }
+
+  @spec new() :: t(any())
+  def new() do
+    {H.new(), H.new()}
+  end
+
+  @spec insert(t(item), item, integer()) :: t(item) when item: any()
+  def insert({insertions, deletions}, item, nicety) do
+    {H.insert(insertions, nicety, item), deletions}
+  end
+
+  @spec delete(t(item), item, integer()) :: t(item) when item: any()
+  def delete({insertions, deletions}, item, nicety) do
+    {insertions, H.insert(deletions, nicety, item)}
+  end
+
+  @spec pop(t(item)) :: {:error, :empty} | {:ok, {item, integer()}, t(item)} when item: any()
+  def pop({insertions, deletions}) do
+    itop = H.top(insertions)
+    dtop = H.top(deletions)
+
+    cond do
+      itop == {:error, :empty} ->
+        {:error, :empty}
+
+      itop != dtop ->
+        {:ok, {nicety, item}, insertions} = H.delete_min(insertions)
+        {:ok, {item, nicety}, {insertions, deletions}}
+
+      true ->
+        {_, _, insertions} = H.delete_min(insertions)
+        {_, _, deletions} = H.delete_min(deletions)
+        pop({insertions, deletions})
+    end
+  end
+
+  @spec decrease_nicety(t(item), item, integer(), integer()) :: t(item) when item: any()
+  def decrease_nicety(pq, _item, old_nicety, new_nicety) when old_nicety <= new_nicety do
+    pq
+  end
+
+  def decrease_nicety(pq, item, old_nicety, new_nicety) do
+    pq
+    |> delete(item, old_nicety)
+    |> insert(item, new_nicety)
+  end
+end
+```
+
+<!-- livebook:{"attrs":{"assign_to":"puzzle_input","day":"17","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "17", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+grid =
+  for {row, i} <- puzzle_input |> String.split() |> Stream.with_index(),
+      {val, j} <- row |> String.to_charlist() |> Stream.with_index(),
+      into: %{},
+      do: {{i, j}, val - ?0}
+```
+
+```elixir
+defmodule AoC2023.Day17 do
+  alias PriorityQueue, as: PQ
+
+  @spec part1(%{coord => loss}) :: total_loss
+        when coord: {i :: non_neg_integer(), j :: non_neg_integer()},
+             loss: pos_integer(),
+             total_loss: pos_integer()
+  def part1(grid) do
+    {dest, _} = Enum.max(grid)
+
+    PQ.new()
+    |> PQ.insert({{0, 1}, {0, 1, 1}}, grid[{0, 1}])
+    |> PQ.insert({{1, 0}, {1, 0, 1}}, grid[{1, 0}])
+    |> total_loss_p1(
+      grid,
+      dest,
+      %{
+        {{0, 1}, {0, 1, 1}} => grid[{1, 0}],
+        {{1, 0}, {1, 0, 1}} => grid[{0, 1}]
+      }
+    )
+  end
+
+  @spec part2(%{coord => loss}) :: total_loss
+        when coord: {i :: non_neg_integer(), j :: non_neg_integer()},
+             loss: pos_integer(),
+             total_loss: pos_integer()
+  def part2(grid) do
+    {dest, _} = Enum.max(grid)
+
+    PQ.new()
+    |> PQ.insert({{0, 1}, {0, 1, 1}}, grid[{0, 1}])
+    |> PQ.insert({{1, 0}, {1, 0, 1}}, grid[{1, 0}])
+    |> total_loss_p2(
+      grid,
+      dest,
+      %{
+        {{0, 1}, {0, 1, 1}} => grid[{1, 0}],
+        {{1, 0}, {1, 0, 1}} => grid[{0, 1}]
+      }
+    )
+  end
+
+  defp total_loss_p1(pq, grid, dest, seen) do
+    case PQ.pop(pq) do
+      {:ok, {{^dest, _}, loss}, _pq} ->
+        loss
+
+      {:ok, {{{i, j}, {di, dj, steps}}, loss}, pq} ->
+        {i2, j2} = {i + dj, j - di}
+        pds = {{i2, j2}, {dj, -di, 1}}
+        new_nicety = grid[{i2, j2}] && loss + grid[{i2, j2}]
+
+        {pq, seen} =
+          if new_nicety do
+            case seen[pds] do
+              nil ->
+                pq = PQ.insert(pq, pds, new_nicety)
+                seen = Map.put(seen, pds, new_nicety)
+                {pq, seen}
+
+              old_nicety when old_nicety > new_nicety ->
+                pq = PQ.decrease_nicety(pq, pds, old_nicety, new_nicety)
+                seen = %{seen | pds => new_nicety}
+                {pq, seen}
+
+              _ ->
+                {pq, seen}
+            end
+          else
+            {pq, seen}
+          end
+
+        {i2, j2} = {i - dj, j + di}
+        pds = {{i2, j2}, {-dj, di, 1}}
+        new_nicety = grid[{i2, j2}] && loss + grid[{i2, j2}]
+
+        {pq, seen} =
+          if new_nicety do
+            case seen[pds] do
+              nil ->
+                pq = PQ.insert(pq, pds, new_nicety)
+                seen = Map.put(seen, pds, new_nicety)
+                {pq, seen}
+
+              old_nicety when old_nicety > new_nicety ->
+                pq = PQ.decrease_nicety(pq, pds, old_nicety, new_nicety)
+                seen = %{seen | pds => new_nicety}
+                {pq, seen}
+
+              _ ->
+                {pq, seen}
+            end
+          else
+            {pq, seen}
+          end
+
+        {i2, j2} = {i + di, j + dj}
+        pds = {{i2, j2}, {di, dj, steps + 1}}
+        new_nicety = grid[{i2, j2}] && loss + grid[{i2, j2}]
+
+        {pq, seen} =
+          if steps < 3 && new_nicety do
+            case seen[pds] do
+              nil ->
+                pq = PQ.insert(pq, pds, new_nicety)
+                seen = Map.put(seen, pds, new_nicety)
+                {pq, seen}
+
+              old_nicety when old_nicety > new_nicety ->
+                pq = PQ.decrease_nicety(pq, pds, old_nicety, new_nicety)
+                seen = %{seen | pds => new_nicety}
+                {pq, seen}
+
+              _ ->
+                {pq, seen}
+            end
+          else
+            {pq, seen}
+          end
+
+        total_loss_p1(pq, grid, dest, seen)
+    end
+  end
+
+  defp total_loss_p2(pq, grid, dest, seen) do
+    case PQ.pop(pq) do
+      {:ok, {{^dest, _}, loss}, _pq} ->
+        loss
+
+      {:ok, {{{i, j}, {di, dj, steps}}, loss}, pq} ->
+        {i2, j2} = {i + dj, j - di}
+        pds = {{i2, j2}, {dj, -di, 1}}
+        new_nicety = grid[{i2, j2}] && loss + grid[{i2, j2}]
+
+        {pq, seen} =
+          if steps >= 4 && new_nicety do
+            case seen[pds] do
+              nil ->
+                pq = PQ.insert(pq, pds, new_nicety)
+                seen = Map.put(seen, pds, new_nicety)
+                {pq, seen}
+
+              old_nicety when old_nicety > new_nicety ->
+                pq = PQ.decrease_nicety(pq, pds, old_nicety, new_nicety)
+                seen = %{seen | pds => new_nicety}
+                {pq, seen}
+
+              _ ->
+                {pq, seen}
+            end
+          else
+            {pq, seen}
+          end
+
+        {i2, j2} = {i - dj, j + di}
+        pds = {{i2, j2}, {-dj, di, 1}}
+        new_nicety = grid[{i2, j2}] && loss + grid[{i2, j2}]
+
+        {pq, seen} =
+          if steps >= 4 && new_nicety do
+            case seen[pds] do
+              nil ->
+                pq = PQ.insert(pq, pds, new_nicety)
+                seen = Map.put(seen, pds, new_nicety)
+                {pq, seen}
+
+              old_nicety when old_nicety > new_nicety ->
+                pq = PQ.decrease_nicety(pq, pds, old_nicety, new_nicety)
+                seen = %{seen | pds => new_nicety}
+                {pq, seen}
+
+              _ ->
+                {pq, seen}
+            end
+          else
+            {pq, seen}
+          end
+
+        {i2, j2} = {i + di, j + dj}
+        pds = {{i2, j2}, {di, dj, steps + 1}}
+        new_nicety = grid[{i2, j2}] && loss + grid[{i2, j2}]
+
+        {pq, seen} =
+          if steps < 10 && new_nicety do
+            case seen[pds] do
+              nil ->
+                pq = PQ.insert(pq, pds, new_nicety)
+                seen = Map.put(seen, pds, new_nicety)
+                {pq, seen}
+
+              old_nicety when old_nicety > new_nicety ->
+                pq = PQ.decrease_nicety(pq, pds, old_nicety, new_nicety)
+                seen = %{seen | pds => new_nicety}
+                {pq, seen}
+
+              _ ->
+                {pq, seen}
+            end
+          else
+            {pq, seen}
+          end
+
+        total_loss_p2(pq, grid, dest, seen)
+    end
+  end
+end
+```
+
+```elixir
+AoC2023.Day17.part1(grid)
+```
+
+```elixir
+AoC2023.Day17.part2(grid)
+```
+
+<!-- livebook:{"offset":10841,"stamp":{"token":"XCP.5iEb3qW-QP4rnET8aqR6hkVEEiedb2qeoHeOCl4kfbfCs4J2HldIvqUqjjoTPLaxwRsuX2xRsMtgAJi307VkSRYd6SqdpmomcggsBDGoGqm9Y4jQSwM","version":2}} -->
