@@ -1,0 +1,69 @@
+# Advent of Code 2024 - Day 4
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.7"}
+])
+```
+
+## Section
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiI0Iiwic2Vzc2lvbl9zZWNyZXQiOiJBT0NfU0VTU0lPTiIsInllYXIiOiIyMDI0In0","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "4", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+input = puzzle_input |> String.split() |> Enum.map(&String.to_charlist/1)
+```
+
+```elixir
+grid =
+  for {row, i} <- Enum.with_index(input),
+      {char, j} <- Enum.with_index(row),
+      into: %{},
+      do: {{i, j}, char}
+```
+
+```elixir
+defmodule AoC2024.Day04 do
+  def part_1(grid) do
+    directions =
+      for di <- -1..1,
+          dj <- -1..1,
+          di != 0 or dj != 0,
+          do: {di, dj}
+
+    directions
+    |> Enum.map(fn {di, dj} ->
+      Enum.count(Map.keys(grid), fn coord ->
+        coord
+        |> Stream.iterate(fn {i, j} -> {i + di, j + dj} end)
+        |> Stream.take(4)
+        |> Enum.map(&grid[&1])
+        |> Kernel.==(~c"XMAS")
+      end)
+    end)
+    |> Enum.sum()
+  end
+
+  def part_2(grid) do
+    Enum.count(grid, fn
+      {{i, j}, ?A} ->
+        [grid[{i - 1, j - 1}], grid[{i + 1, j + 1}]] in [~c"MS", ~c"SM"] and
+        [grid[{i - 1, j + 1}], grid[{i + 1, j - 1}]] in [~c"MS", ~c"SM"]
+        
+      _ ->
+        false
+    end)
+  end
+end
+```
+
+```elixir
+AoC2024.Day04.part_1(grid)
+```
+
+<!-- livebook:{"offset":1465,"stamp":{"token":"XCP.rRfsGygsXWzXxS_xwjzePLG5c1KAI1zGmYdraMXtgn56hBbYHS8RNkgqnsJhKhTlP_ghPRLnH1WdSpr0LKDGTYeslrVzN1Hjc69-haOJPm7gyAtoe00","version":2}} -->

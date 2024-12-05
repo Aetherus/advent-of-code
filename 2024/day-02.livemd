@@ -1,0 +1,66 @@
+# Advent of Code - 2024 Day 2
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.7"}
+])
+```
+
+## Preparation
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiIyIiwic2Vzc2lvbl9zZWNyZXQiOiJBT0NfU0VTU0lPTiIsInllYXIiOiIyMDI0In0","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "2", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+## Part 1
+
+```elixir
+puzzle_input
+|> String.split("\n")
+|> Enum.map(&String.split/1)
+|> Enum.map(&Enum.map(&1, fn s -> String.to_integer(s) end))
+|> Enum.count(fn
+  [a, a | _] ->
+    false
+  
+  [a, b | _] = line ->
+    sign = div(a - b, abs(a - b))
+  
+    line
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.all?(fn [a, b] ->
+      sign * (a - b) in 1..3
+    end)
+end)
+```
+
+## Part 2
+
+```elixir
+puzzle_input
+|> String.split("\n")
+|> Enum.map(&String.split/1)
+|> Enum.map(&Enum.map(&1, fn s -> String.to_integer(s) end))
+|> Enum.count(fn line ->
+  0..length(line)
+  |> Stream.map(&List.delete_at(line, &1))
+  |> Enum.any?(fn
+    [a, a | _] ->
+      false
+  
+    [a, b | _] = line ->
+      sign = div(a - b, abs(a - b))
+  
+      line
+      |> Enum.chunk_every(2, 1, :discard)
+      |> Enum.all?(fn [a, b] ->
+        sign * (a - b) in 1..3
+      end)
+  end)
+end)
+```
+
+<!-- livebook:{"offset":1310,"stamp":{"token":"XCP.N777jGbCHCUp0SP_t__vLUM8pOHgrRPf1iIdaa90DHL7SMqOXvq50eRHEE7w_gN1-KXD1VAvIKIL-ehDN0GNsAhK4XLYzDTITIwB8ztOklXmbhrF6Sg","version":2}} -->
