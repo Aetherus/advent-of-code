@@ -1,0 +1,115 @@
+# Advent of Code 2024 - Day 6
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.7"},
+  {:libgraph, "~> 0.16.0"}
+])
+```
+
+## Preparation
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiI2Iiwic2Vzc2lvbl9zZWNyZXQiOiJBT0NfU0VTU0lPTiIsInllYXIiOiIyMDI0In0","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "6", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+input =
+  puzzle_input
+  |> String.split("\n")
+  |> Enum.map(&String.to_charlist/1)
+```
+
+```elixir
+obstacles =
+  for {row, i} <- Enum.with_index(input, 1),
+      {?#, j} <- Enum.with_index(row, 1),
+      into: MapSet.new(),
+      do: {i, j}
+```
+
+```elixir
+guard_i = Enum.find_index(input, & ?^ in &1)
+```
+
+```elixir
+guard_j = input |> Enum.at(guard_i) |> Enum.find_index(& &1 == ?^)
+```
+
+```elixir
+guard = {guard_i + 1, guard_j + 1}
+```
+
+```elixir
+imax = length(input)
+```
+
+```elixir
+jmax = length(hd(input))
+```
+
+## Part 1
+
+```elixir
+watched =
+  {guard, {-1, 0}}
+  |> Stream.iterate(fn {{i, j}, {di, dj}} ->
+    if {i + di, j + dj} in obstacles do
+      {{i, j}, {dj, -di}}
+    else
+      {{i + di, j + dj}, {di, dj}}
+    end
+  end)
+  |> Enum.reduce_while(MapSet.new(), fn {{i, j}, _dir} = state, seen ->
+    cond do
+      i == 0 -> {:halt, seen}
+      i > imax -> {:halt, seen}
+      j == 0 -> {:halt, seen}
+      j > jmax -> {:halt, seen}
+      state in seen -> {:halt, seen}
+      true -> {:cont, MapSet.put(seen, state)}
+    end
+  end)
+  |> Enum.map(&elem(&1, 0))
+  |> Enum.uniq()
+```
+
+```elixir
+length(watched)
+```
+
+## Part 2
+
+```elixir
+watched
+|> List.delete(guard)
+|> Task.async_stream(fn new_obstacle ->
+  obstacles = MapSet.put(obstacles, new_obstacle)
+  
+  {guard, {-1, 0}}
+  |> Stream.iterate(fn {{i, j}, {di, dj}} ->
+    if {i + di, j + dj} in obstacles do
+      {{i, j}, {dj, -di}}
+    else
+      {{i + di, j + dj}, {di, dj}}
+    end
+  end)
+  |> Enum.reduce_while(MapSet.new(), fn {{i, j}, _dir} = state, seen ->
+    cond do
+      i == 0 -> {:halt, 0}
+      i > imax -> {:halt, 0}
+      j == 0 -> {:halt, 0}
+      j > jmax -> {:halt, 0}
+      state in seen -> {:halt, 1}
+      true -> {:cont, MapSet.put(seen, state)}
+    end
+  end)
+end, ordered: false)
+|> Stream.map(&elem(&1, 1))
+|> Enum.sum()
+```
+
+<!-- livebook:{"offset":2293,"stamp":{"token":"XCP.tJE3LtEiQYfjPLR6Nd8BRSPmPQHVyYCkD4Tfq4XJg_myKox5JCRYW7v42NV1hBOKEUgjTSNnVz_4kkcEY4bUXKNw8G1cKd3c7Y0i2cwbE558KYYjNJo","version":2}} -->
