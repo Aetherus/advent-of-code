@@ -1,0 +1,155 @@
+# Advent of Code - 2024 Day 8
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.7"}
+])
+```
+
+## Part 1
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiI4Iiwic2Vzc2lvbl9zZWNyZXQiOiJBT0NfU0VTU0lPTiIsInllYXIiOiIyMDI0In0","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "8", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+input =
+  puzzle_input
+  |> String.split("\n")
+  |> Enum.map(&String.to_charlist/1)
+```
+
+```elixir
+grid =
+  for {row, i} <- Enum.with_index(input),
+      {char, j} <- Enum.with_index(row),
+      char != ?.,
+      into: %{},
+      do: {{i, j}, char}
+```
+
+```elixir
+imax = length(input) - 1
+```
+
+```elixir
+jmax = length(hd(input)) - 1
+```
+
+## Part 1
+
+```elixir
+grid
+|> Enum.group_by(&elem(&1, 1), &elem(&1, 0))
+|> Map.values()
+|> Enum.map(fn antennas ->
+  for {i1, j1} = a1 <- antennas,
+      {i2, j2} = a2 <- antennas,
+      a1 != a2,
+      di = i2 - i1,
+      dj = j2 - j1 do
+    [
+      {i1 - di, j1 - dj},
+      {i2 + di, j2 + dj}
+    ]
+  end
+end)
+|> List.flatten()
+|> Enum.uniq()
+|> Enum.count(fn {i, j} ->
+  i in 0..imax and j in 0..jmax
+end)
+```
+
+## Part 2
+
+```elixir
+grid
+|> Enum.group_by(&elem(&1, 1), &elem(&1, 0))
+|> Map.values()
+|> Enum.map(fn antennas ->
+  for {i1, j1} = a1 <- antennas,
+      {i2, j2} = a2 <- antennas,
+      a1 != a2,
+      di = i2 - i1,
+      dj = j2 - j1 do
+    antinodes1 =
+      a1
+      |> Stream.iterate(fn {i, j} ->
+        {i - di, j - dj}
+      end)
+      |> Enum.take_while(fn {i, j} ->
+        i in 0..imax and j in 0..jmax
+      end)
+
+    antinodes2 =
+      a1
+      |> Stream.iterate(fn {i, j} ->
+        {i + di, j + dj}
+      end)
+      |> Enum.take_while(fn {i, j} ->
+        i in 0..imax and j in 0..jmax
+      end)
+
+    [antinodes1, antinodes2]
+  end
+end)
+|> List.flatten()
+|> Enum.uniq()
+|> length()
+```
+
+## Final State
+
+```elixir
+final_grid =
+  grid
+  |> Enum.group_by(&elem(&1, 1), &elem(&1, 0))
+  |> Map.values()
+  |> Enum.map(fn antennas ->
+    for {i1, j1} = a1 <- antennas,
+        {i2, j2} = a2 <- antennas,
+        a1 != a2,
+        di = i2 - i1,
+        dj = j2 - j1 do
+      antinodes1 =
+        a1
+        |> Stream.iterate(fn {i, j} ->
+          {i - di, j - dj}
+        end)
+        |> Enum.take_while(fn {i, j} ->
+          i in 0..imax and j in 0..jmax
+        end)
+  
+      antinodes2 =
+        a1
+        |> Stream.iterate(fn {i, j} ->
+          {i + di, j + dj}
+        end)
+        |> Enum.take_while(fn {i, j} ->
+          i in 0..imax and j in 0..jmax
+        end)
+  
+      [antinodes1, antinodes2]
+    end
+  end)
+  |> List.flatten()
+  |> Enum.uniq()
+  |> Map.new(&{&1, ?#})
+  |> Map.merge(grid)
+```
+
+```elixir
+for i <- 0..imax do
+  for j <- 0..jmax do
+    final_grid[{i, j}] || ?.
+  end
+end
+|> Enum.join("\n")
+|> IO.puts()
+```
+
+<!-- livebook:{"offset":2844,"stamp":{"token":"XCP.ZFz13QgM-Wj_fdOUIk32hxcLThVepAgBpSQrwMk-1saKK3he_mr4PWyyK1Ss529KxaLztY9ZT57CLJzlMvhxnxW9cgQQ_W6rKABFLd9tXQkSPotRKuo","version":2}} -->

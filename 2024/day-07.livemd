@@ -1,0 +1,88 @@
+# Advent of Code - 2024 Day 7
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.7"}
+])
+```
+
+## Part 1
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiI3Iiwic2Vzc2lvbl9zZWNyZXQiOiJBT0NfU0VTU0lPTiIsInllYXIiOiIyMDI0In0","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "7", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+lines =
+  puzzle_input
+  |> String.split("\n")
+  |> Enum.map(&String.split(&1, ~r/\D+/, trim: true))
+  |> Enum.map(fn nums -> Enum.map(nums, &String.to_integer/1) end)
+  |> Enum.map(fn [result | operands] ->
+    {result, Enum.reverse(operands)}
+  end)
+```
+
+```elixir
+defmodule AoC2024.Day07 do
+  def part_1(input) do
+    input
+    |> Enum.filter(fn {result, rev_operands} ->
+      solvable_1?(result, rev_operands)
+    end)
+    |> Enum.map(&elem(&1, 0))
+    |> Enum.sum()
+  end
+
+  def part_2(input) do
+    input
+    |> Enum.filter(fn {result, rev_operands} ->
+      solvable_2?(result, rev_operands)
+    end)
+    |> Enum.map(&elem(&1, 0))
+    |> Enum.sum()
+  end
+
+  defp solvable_1?(target, []) do
+    target == 0
+  end
+
+  defp solvable_1?(target, [h | t]) do
+    solvable_1?(target - h, t) or
+    (rem(target, h) == 0 and solvable_1?(div(target, h), t))
+  end
+
+  defp solvable_2?(target, []) do
+    target == 0
+  end
+  
+  defp solvable_2?(target, [h | t]) do
+    solvable_2?(target - h, t) or
+    (rem(target, h) == 0 and solvable_2?(div(target, h), t)) or
+    ((truncated = truncate(target, h)) && solvable_2?(truncated, t))
+  end
+
+  defp truncate(a, b) when a < b, do: false
+
+  defp truncate(a, 0), do: a
+
+  defp truncate(a, b) when rem(a, 10) != rem(b, 10), do: false
+
+  defp truncate(a, b) do
+    truncate(div(a, 10), div(b, 10))
+  end
+end
+```
+
+```elixir
+AoC2024.Day07.part_1(lines)
+```
+
+```elixir
+AoC2024.Day07.part_2(lines)
+```
+
+<!-- livebook:{"offset":1881,"stamp":{"token":"XCP.mIhViVoMyDnW0YyGwvffFBizJqnuBnRGZmlhC3dUfZMt9pFDI1yrTORolRse6APPC61YTiitJXiwXSMb-cVm3Uexwe7Ye5D-IvNknq178u5A2iITvXs","version":2}} -->
