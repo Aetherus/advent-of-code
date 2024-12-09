@@ -1,0 +1,246 @@
+# Advent of Code - 2024 Day 9
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.7"}
+])
+```
+
+## Part 1
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiI5Iiwic2Vzc2lvbl9zZWNyZXQiOiJBT0NfU0VTU0lPTiIsInllYXIiOiIyMDI0In0","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "9", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+# puzzle_input = "2333133121414131402"
+```
+
+```elixir
+defmodule Zipper do
+  def from_list(list) do
+    {[], list}
+  end
+
+  def next({_, []}) do
+    nil
+  end
+
+  def next({prev, [h | t]}) do
+    {[h | prev], t}
+  end
+
+  def prev({[], _}) do
+    nil
+  end
+
+  def prev({[h | t], next}) do
+    {t, [h | next]}
+  end
+
+  def get({_, []}) do
+    nil
+  end
+
+  def get({_, [h | _]}) do
+    h
+  end
+
+  def update({_, []}, _) do
+    nil
+  end
+
+  def update({prev, [_ | t]}, val) do
+    {prev, [val | t]}
+  end
+
+  def delete({_, []}) do
+    nil
+  end
+
+  def delete({prev, [_ | t]}) do
+    {prev, t}
+  end
+
+  def rewind({[], _} = zipper) do
+    zipper
+  end
+
+  def rewind(zipper) do
+    zipper
+    |> prev()
+    |> rewind()
+  end
+
+  def to_list(zipper) do
+    zipper
+    |> rewind()
+    |> elem(1)
+  end
+end
+```
+
+```elixir
+defmodule AoC2024.Day09 do
+  def parse(input) do
+    [files, spaces] =
+      input
+      |> :binary.bin_to_list()
+      |> Stream.map(& &1 - ?0)
+      |> Stream.chunk_every(2, 2, [0])
+      |> Enum.zip_with(&Function.identity/1)
+
+    files =
+      files
+      |> Stream.with_index()
+      |> Enum.map(fn {size, id} ->
+        {:file, id, size}
+      end)
+
+    spaces =
+      spaces
+      |> Stream.with_index()
+      |> Enum.map(fn {size, id} ->
+        {:space, id, size}
+      end)
+
+    [files, spaces]
+    |> Enum.zip_with(&Function.identity/1)
+    |> List.flatten()
+  end
+
+  def part_1(disc) do
+    disc
+    |> :queue.from_list()
+    |> do_part_1([])
+    |> Enum.take_while(&match?({:file, _, _}, &1))
+    |> Enum.reduce({0, 0}, fn {:file, id, size}, {checksum, i} ->
+      {checksum + div((i + i + size - 1) * size * id, 2), i + size}
+    end)
+    |> elem(0)
+  end
+
+  defp do_part_1({[], []}, acc) do
+    Enum.reverse(acc)
+  end
+
+  defp do_part_1({[{:file, _, _} = file], []}, acc) do
+    Enum.reverse([file | acc])
+  end
+
+  defp do_part_1({[], [{:file, _, _} = file]}, acc) do
+    Enum.reverse([file | acc])
+  end
+
+  defp do_part_1({[{:space, _, _}], []}, acc) do
+    Enum.reverse(acc)
+  end
+  
+  defp do_part_1({[], [{:space, _, _}]}, acc) do
+    Enum.reverse(acc)
+  end
+
+  defp do_part_1(queue, acc) do
+    {{:value, front}, queue} = :queue.out(queue)
+    {{:value, rear}, queue} = :queue.out_r(queue)
+
+    cond do
+      match?({:file, _, _}, front) ->
+        do_part_1(:queue.in(rear, queue), [front | acc])
+
+      match?({:space, _, _}, rear) ->
+        do_part_1(:queue.in_r(front, queue), acc)
+
+      elem(front, 2) == elem(rear, 2) ->
+        do_part_1(queue, [rear | acc])
+
+      elem(front, 2) > elem(rear, 2) ->
+        {:space, id, space} = front
+        {:file, _id, size} = rear
+        diff = space - size
+        do_part_1(:queue.in_r({:space, id, diff}, queue), [rear | acc])
+
+      true ->
+        {:space, _id, space} = front
+        {:file, id, size} = rear
+        diff = size - space
+        do_part_1(:queue.in({:file, id, diff}, queue), [{:file, id, space} | acc])
+    end
+  end
+
+  def part_2(disc) do
+    {files, spaces} =
+      disc
+      |> Stream.scan({nil, nil, 0, 0}, fn {kind, id, size}, {_, _, prev_size, prev_pos} ->
+        {kind, id, size, prev_size + prev_pos}
+      end)
+      |> Enum.split_with(&match?({:file, _, _, _}, &1))
+
+    files = Enum.reverse(files)
+
+    spaces = Zipper.from_list(spaces)
+
+    acc = do_part_2(files, spaces, [])
+
+    for {:file, id, size, pos} <- acc, reduce: 0 do
+      checksum ->
+        checksum + div((pos + pos + size - 1) * size * id, 2)
+    end
+  end
+
+  defp do_part_2([], _spaces, acc) do
+    acc
+  end
+
+  defp do_part_2([{:file, id, size, _pos} = file | files], spaces, acc) do
+    case get_and_update_spaces(spaces, size) do
+      {nil, spaces} ->
+        do_part_2(files, spaces, [file |acc])
+
+      {new_pos, spaces} ->
+        do_part_2(files, spaces, [{:file, id, size, new_pos} | acc])
+    end
+  end
+
+  defp get_and_update_spaces(spaces, size) do
+    case Zipper.get(spaces) do
+      nil ->
+        {nil, Zipper.rewind(spaces)}
+        
+      {:space, _id, ^size, pos} ->
+        spaces
+        |> Zipper.delete()
+        |> Zipper.rewind()
+        |> then(&{pos, &1})
+
+      {:space, _id, space, _pos} when space < size ->
+        spaces
+        |> Zipper.next()
+        |> get_and_update_spaces(size)
+
+      {:space, id, space, pos} ->
+        spaces
+        |> Zipper.update({:space, id, space - size, pos + size})
+        |> Zipper.rewind()
+        |> then(&{pos, &1})
+    end
+  end
+end
+```
+
+```elixir
+disc = AoC2024.Day09.parse(puzzle_input)
+```
+
+```elixir
+AoC2024.Day09.part_1(disc)
+```
+
+```elixir
+AoC2024.Day09.part_2(disc)
+```
+
+<!-- livebook:{"offset":4977,"stamp":{"token":"XCP.e1eLdsriXb9wlCFAoUlNfm7ObuhQpCVrRR_LLVPstHWrvhAL8vz-qbCXmPmUEb93iKOok9tAw9FzGMjeg9iXXZPJ5CDIFfI7p4auC4EZR4Ok9KGeVgc","version":2}} -->
