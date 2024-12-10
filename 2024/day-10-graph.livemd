@@ -1,0 +1,97 @@
+# Advent of Code - 2024 Day 10 - Graph
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.7"},
+  {:libgraph, "~> 0.16.0"}
+])
+```
+
+## Section
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiIxMCIsInNlc3Npb25fc2VjcmV0IjoiQU9DX1NFU1NJT04iLCJ5ZWFyIjoiMjAyNCJ9","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "10", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+test_input = """
+89010123
+78121874
+87430965
+96549874
+45678903
+32019012
+01329801
+10456732
+"""
+|> String.trim()
+```
+
+```elixir
+grid =
+  puzzle_input
+  |> String.split("\n")
+  |> Enum.map(fn line ->
+    line
+    |> :binary.bin_to_list()
+    |> Enum.map(& &1 - ?0)
+  end)
+```
+
+```elixir
+grid =
+  for {row, i} <- Enum.with_index(grid),
+      {val, j} <- Enum.with_index(row),
+      into: %{},
+      do: {{i, j}, val}
+```
+
+```elixir
+graph =
+  for {coord, _} <- grid, reduce: Graph.new(type: :directed) do
+    g -> Graph.add_vertex(g, coord)
+  end
+```
+
+```elixir
+graph =
+  for {{i1, j1} = coord1, n} <- grid,
+      coord2 <- [{i1, j1 - 1}, {i1, j1 + 1}, {i1 - 1, j1}, {i1 + 1, j1}],
+      grid[coord2] == n + 1,
+      reduce: graph do
+    g -> Graph.add_edge(g, coord1, coord2)
+  end
+```
+
+```elixir
+pos0 = grid |> Enum.filter(&elem(&1, 1) == 0) |> Enum.map(&elem(&1, 0))
+```
+
+```elixir
+pos9 = grid |> Enum.filter(&elem(&1, 1) == 9) |> Enum.map(&elem(&1, 0))
+```
+
+## Part 1
+
+```elixir
+for start <- pos0,
+    dest <- pos9,
+    Graph.get_paths(graph, start, dest) != [],
+    reduce: 0,
+    do: (count -> count + 1)
+```
+
+## Part 2
+
+```elixir
+for start <- pos0,
+    dest <- pos9,
+    paths = Graph.get_paths(graph, start, dest),
+    reduce: 0,
+    do: (count -> count + length(paths))
+```
+
+<!-- livebook:{"offset":1763,"stamp":{"token":"XCP.yrNnj9oO__QYt34GbIDrHIu41BRwBXdt8vkLs_5fNBtEzfrCPH1qG2dvKOaX0ON7swwTKM5wFwf3uZ90HxOYyD4O-MEXsCGpBqnX3zn4fdmiNVguKJE","version":2}} -->
