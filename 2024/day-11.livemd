@@ -1,0 +1,74 @@
+# Advent of Code - 2024 Day 11
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.7"},
+  {:benchee, "~> 1.3"}
+])
+```
+
+## Section
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiIxMSIsInNlc3Npb25fc2VjcmV0IjoiQU9DX1NFU1NJT04iLCJ5ZWFyIjoiMjAyNCJ9","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "11", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+test_input = "0 1 10 99 999"
+```
+
+```elixir
+stones = puzzle_input |> String.split() |> Enum.map(&String.to_integer/1)
+```
+
+```elixir
+transform = fn
+  0 ->
+    [1]
+
+  n ->
+    len = floor(:math.log10(n)) + 1
+
+    if Bitwise.band(len, 1) == 1 do
+      [n * 2024]
+    else
+      d = 10 ** Bitwise.bsr(len, 1)
+      [div(n, d), rem(n, d)]
+    end
+end
+```
+
+```elixir
+stones
+|> Enum.frequencies()
+|> Stream.iterate(fn freqs ->
+  for {num, freq} <- freqs, num2 <- transform.(num), reduce: %{} do
+    freqs2 -> Map.update(freqs2, num2, freq, & &1 + freq)
+  end
+end)
+|> Enum.at(75)
+|> Map.values()
+|> Enum.sum()
+```
+
+```elixir
+Benchee.run(%{
+  "Part 2": fn ->
+    stones
+    |> Enum.frequencies()
+    |> Stream.iterate(fn freqs ->
+      for {num, freq} <- freqs, num2 <- transform.(num), reduce: %{} do
+        freqs2 -> Map.update(freqs2, num2, freq, & &1 + freq)
+      end
+    end)
+    |> Enum.at(75)
+    |> Map.values()
+    |> Enum.sum()
+  end
+})
+```
+
+<!-- livebook:{"offset":1419,"stamp":{"token":"XCP.GOB0_UC1IRSFCHu5-IJ6nbWY0VoSKdgEmddiOYnpYJ_R32Okaw1cNOjFWe-C_7raEDos1zr25sBUdoMiGZspehHc3kIGIgfgVbg_9jyABss4hooRmV0","version":2}} -->
