@@ -1,0 +1,176 @@
+# Advent of Code 2024 - Day 12
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.7"}
+])
+```
+
+## Section
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiIxMiIsInNlc3Npb25fc2VjcmV0IjoiQU9DX1NFU1NJT04iLCJ5ZWFyIjoiMjAyNCJ9","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "12", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+grid =
+  puzzle_input
+  |> String.split("\n")
+  |> Enum.map(&String.to_charlist/1)
+```
+
+```elixir
+garden =
+  for {row, i} <- Enum.with_index(grid),
+      {plant, j} <- Enum.with_index(row),
+      into: %{},
+      do: {{i, j}, plant}
+```
+
+```elixir
+defmodule AoC2024.Day12 do
+  def regions(garden) do
+    garden
+    |> regions([])
+    |> Enum.map(&MapSet.new/1)
+  end
+
+  def border_tiles(region) do
+    Enum.filter(region, fn tile ->
+      tile
+      |> neighbors()
+      |> Enum.any?(& &1 not in region)
+    end)
+  end
+
+  def area(region) do
+    MapSet.size(region)
+  end
+
+  def perimeter(region) do    
+    region
+    |> border_tiles()
+    |> Enum.map(fn tile ->
+      tile
+      |> neighbors()
+      |> Enum.count(& &1 not in region)
+    end)
+    |> Enum.sum()
+  end
+
+  def sides(region) do
+    border_tiles =
+      region
+      |> border_tiles()
+      |> Enum.flat_map(fn tile ->
+        acc = (up(tile) in region) && [] || [{tile, :up}]
+        acc = (down(tile) in region) && acc || [{tile, :down} | acc]
+        acc = (left(tile) in region) && acc || [{tile, :left} | acc]
+        (right(tile) in region) && acc || [{tile, :right} | acc]
+      end)
+      |> MapSet.new()
+
+    count_sides(border_tiles, 0)
+  end
+
+  defp count_sides(border_tiles, acc) do
+    if MapSet.size(border_tiles) == 0 do
+      acc
+    else
+      border_tiles = remove_border(border_tiles, Enum.min(border_tiles))
+      count_sides(border_tiles, acc + 1)
+    end
+  end
+
+  defp remove_border(border_tiles, {tile, dir} = entry) when dir in [:up, :down] do
+    if entry in border_tiles do
+      border_tiles = MapSet.delete(border_tiles, entry)
+      remove_border(border_tiles, {right(tile), dir})
+    else
+      border_tiles
+    end
+  end
+
+  defp remove_border(border_tiles, {tile, dir} = entry) when dir in [:left, :right] do
+    if entry in border_tiles do
+      border_tiles = MapSet.delete(border_tiles, entry)
+      remove_border(border_tiles, {down(tile), dir})
+    else
+      border_tiles
+    end
+  end
+
+  defp neighbors(tile) do
+    [
+      up(tile),
+      down(tile),
+      left(tile),
+      right(tile)
+    ]
+  end
+
+  defp up({i, j}) do
+    {i - 1, j}
+  end
+
+  defp down({i, j}) do
+    {i + 1, j}
+  end
+
+  defp left({i, j}) do
+    {i, j - 1}
+  end
+
+  defp right({i, j}) do
+    {i, j + 1}
+  end
+
+  defp regions(garden, acc) when map_size(garden) == 0 do
+    acc
+  end
+  
+  defp regions(garden, acc) do
+    {tile, plant} = Enum.at(garden, 0)
+    {region, garden} = dfs_region(garden, plant, tile, [])
+    regions(garden, [region | acc])
+  end
+
+  defp dfs_region(garden, plant, tile, acc) do
+    if garden[tile] == plant do
+      garden = Map.delete(garden, tile)
+      acc = [tile | acc]
+      
+      for neighbor <- neighbors(tile), reduce: {acc, garden} do
+        {acc, garden} -> dfs_region(garden, plant, neighbor, acc)
+      end
+    else
+      {acc, garden}
+    end
+  end
+end
+```
+
+```elixir
+import AoC2024.Day12
+```
+
+```elixir
+regions = regions(garden)
+```
+
+```elixir
+for region <- regions, reduce: 0 do
+  total -> total + area(region) * perimeter(region)
+end
+```
+
+```elixir
+for region <- regions, reduce: 0 do
+  total -> total + area(region) * sides(region)
+end
+```
+
+<!-- livebook:{"offset":3608,"stamp":{"token":"XCP.jW8X6Fvv9-iAVyuFq5pbzuvFDrOk39XO7HCXlik2D11aBYwaorapdBPhOLB-6l5GE0BjCRjX5ar1oJp9xiKEsZVFMCMSCL-75pOpfpNZBZO5GD1Dpn8","version":2}} -->
