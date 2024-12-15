@@ -1,0 +1,90 @@
+# Advent of Code 2024 - Day 13
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.7"},
+  {:nx, "~> 0.9.2"}
+])
+```
+
+## Input Parsing
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiIxMyIsInNlc3Npb25fc2VjcmV0IjoiQU9DX1NFU1NJT04iLCJ5ZWFyIjoiMjAyNCJ9","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "13", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+```elixir
+machines =
+  ~r/(?:\+|\-)?\d+/
+  |> Regex.scan(puzzle_input)
+  |> List.flatten()
+  |> Enum.map(&String.to_integer/1)
+  |> Enum.chunk_every(6)
+  |> Enum.map(fn [xa, ya, xb, yb, xt, yt] ->
+    {
+      {xa, ya},
+      {xb, yb},
+      {xt, yt}
+    }
+  end)
+```
+
+```elixir
+cost = fn machines ->
+  for {{xa, ya}, {xb, yb}, {xt, yt}} <- machines do
+    d = xb * ya - xa * yb
+    
+    if d == 0 do
+      cost_a = rem(xt, xa) == 0 && rem(yt, ya) == 0 && (3 * div(yt, ya)) || nil
+      cost_b = rem(xt, xb) == 0 && rem(yt, yb) == 0 && div(yt, yb) || nil
+      min(cost_a, cost_b)
+    else
+      nx = xa * xb * yt - xa * xt * yb
+      ny = xb * ya * yt - xt * ya * yb
+  
+      if rem(nx, d) == 0 and rem(ny, d) == 0 do
+        y = div(ny, d)
+
+        if rem(y, ya) == 0 and rem(yt - y, yb) == 0 do
+          3 * div(y, ya) + div(yt - y, yb)
+        else
+          nil
+        end
+      else
+        nil
+      end
+    end
+  end
+  |> Enum.reject(&is_nil/1)
+  |> Enum.sum()
+end
+```
+
+## Part 1
+
+```elixir
+cost.(machines)
+```
+
+## Part 2
+
+```elixir
+offset = 10_000_000_000_000
+```
+
+```elixir
+machines
+|> Enum.map(fn {a, b, {xt, yt}} ->
+  {a, b, {xt + offset, yt + offset}}
+end)
+|> cost.()
+```
+
+<!-- livebook:{"offset":1690,"stamp":{"token":"XCP.euulWHkrohITR5y5E5F4Du1od9GfMdhTrPxunGC0nR6jQXdNkclj1V16v5vKdjUTpv4dYIFCocQBOy50mVRJfCRfHHUURVjn2X5_ZKOBKTgIfG3-TpU","version":2}} -->

@@ -1,0 +1,205 @@
+# Advent of Code 2024 - Day 14
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.7"},
+  {:bandit, "~> 1.6"}
+])
+```
+
+## Input Parsing
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiIxNCIsInNlc3Npb25fc2VjcmV0IjoiQU9DX1NFU1NJT04iLCJ5ZWFyIjoiMjAyNCJ9","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "14", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+```elixir
+robots =
+  ~r/-?\d+/
+  |> Regex.scan(puzzle_input)
+  |> Enum.map(&hd/1)
+  |> Enum.map(&String.to_integer/1)
+  |> Enum.chunk_every(4)
+  |> Enum.map(fn [x, y, vx, vy] ->
+    {{x, y}, {vx, vy}}
+  end)
+```
+
+```elixir
+width = 101
+height= 103
+```
+
+```elixir
+half_width = div(width, 2)
+half_height = div(height, 2)
+```
+
+```elixir
+robots
+|> Enum.map(fn {{x, y}, {vx, vy}} ->
+  {
+    (x + vx * 100) |> rem(width) |> Kernel.+(width) |> rem(width),
+    (y + vy * 100) |> rem(height) |> Kernel.+(height) |> rem(height)
+  }
+end)
+|> Enum.reject(fn {x, y} ->
+  x == half_width or y == half_height
+end)
+|> Enum.frequencies_by(fn {x, y} ->
+  {div(x, half_width + 1), div(y, half_height + 1)}
+end)
+|> Map.values()
+|> Enum.product()
+```
+
+```elixir
+show = fn robots ->
+  positions =
+    robots
+    |> Enum.map(&elem(&1, 0))
+    |> MapSet.new()
+
+  for i <- 0..width - 1, into: "" do
+    for j <- 0..height - 1, into: "" do
+      {i, j} in positions && "*" || " "
+    end
+    |> Kernel.<>("\n")
+  end
+end
+```
+
+```elixir
+defmodule BathroomServer do
+  use GenServer, restart: :temporary
+
+  @width 101
+  @height 103
+
+  def start_link(robots) do
+    GenServer.start_link(__MODULE__, robots, name: __MODULE__)
+  end
+  
+  @impl true
+  def init(robots) do
+    {:ok, {robots, 0}}
+  end
+
+  def tick() do
+    GenServer.call(__MODULE__, :tick)
+  end
+
+  @impl true
+  def handle_call(:tick, _from, {robots, tick}) do
+    robots2 =
+      Enum.map(robots, fn {{x, y}, {vx, vy} = v} ->
+        x = rem(x + vx + @width, @width)
+        y = rem(y + vy + @height, @height)
+
+        {{x, y}, v}
+      end)
+
+    {:reply, {robots, tick}, {robots2, tick + 1}}
+  end
+end
+```
+
+```elixir
+defmodule MyPlug do
+  @behaviour Plug
+
+  @impl true
+  def init(opts) do
+    opts
+  end
+
+  def call(%Plug.Conn{path_info: []} = conn, _opts) do
+    {robots, tick} = BathroomServer.tick()
+
+    conn
+    |> Plug.Conn.put_resp_content_type("text/html")
+    |> Plug.Conn.send_resp(200, """
+    <!doctype html>
+    <html>
+      <body>
+        <h1>Tick: #{tick}</h1>
+        <div>
+        <pre>
+    #{render(robots)}
+        </pre>
+        </div>
+      </body>
+    </html>
+    """)
+  end
+
+  @impl true
+  def call(%Plug.Conn{} = conn, _opts) do
+    Plug.Conn.send_resp(conn, 404, "")
+  end
+  
+  defp render(robots) do
+    positions =
+      robots
+      |> Enum.map(&elem(&1, 0))
+      |> MapSet.new()
+
+    for i <- 0..100, into: "" do
+      for j <- 0..102, into: "" do
+        if {i, j} in positions, do: "*", else: " "
+      end
+      |> Kernel.<>("\n")
+    end
+  end
+end
+```
+
+```elixir
+Kino.start_child({BathroomServer, robots})
+```
+
+```elixir
+Kino.start_child({Bandit, plug: MyPlug, port: 9292, scheme: :http, ip: :loopback})
+```
+
+```elixir
+length(robots)
+```
+
+```elixir
+{{x, y}, {vx, vy}} = hd(robots)
+```
+
+```elixir
+File.open("/home/slothopher/tmp/aoc-2024-d14.txt", [:write], fn f ->
+  robots
+  |> Stream.iterate(fn robots ->
+    Enum.map(robots, fn {{x, y}, {vx, vy} = v} ->
+      {
+        {
+          x |> Kernel.+(vx) |> Kernel.+(width) |> rem(width),
+          y |> Kernel.+(vy) |> Kernel.+(height) |> rem(height)
+        },
+        v
+      }
+    end)
+  end)
+  |> Stream.map(show)
+  |> Stream.with_index()
+  |> Stream.take(10000)
+  |> Enum.each(fn {rendered, i} ->
+    IO.puts(f, "Tick #{i}\n")
+    IO.puts(f, rendered)
+    IO.puts(f, "\n")
+  end)
+end)
+```
+
+<!-- livebook:{"offset":3816,"stamp":{"token":"XCP.zR3HK3hA30jctkBbfp-E-R161jk8DBnqSQ4y0dKWY6UmzKkP_IVVe_iKP8opnhBVAAq-mIl41VlWrLU4D97uirLGbFoeOEpXoi7fIGGtXDKjYg7lFjQ","version":2}} -->
