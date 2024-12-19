@@ -85,7 +85,7 @@ end
 
 ```elixir
 defmodule AoC2024.Day18 do
-  def part1(input) do
+  def part1_dijkstra(input) do
     rocks = MapSet.new(Enum.take(input, 1024))
     
     graph =
@@ -103,6 +103,42 @@ defmodule AoC2024.Day18 do
     pq = PQ.new() |> PQ.push({0, 0}, 0)
 
     dijkstra(pq, graph, {70, 70}, %{})
+  end
+
+  def part1_bfs(input) do
+    rocks = MapSet.new(Enum.take(input, 1024))
+
+    queue = :queue.from_list([{{0, 0}, 0}])
+
+    bfs(queue, rocks, MapSet.new())
+  end
+
+  defp bfs(queue, rocks, seen) do
+    {{:value, {tile, cost}}, queue} = :queue.out(queue)
+
+    cond do
+      tile == {70, 70} ->
+        cost
+
+      tile in seen ->
+        bfs(queue, rocks, seen)
+        
+      true ->
+        {i, j} = tile
+        
+        seen = MapSet.put(seen, tile)
+        
+        queue =
+          for {i2, j2} <- [{i - 1, j}, {i + 1, j}, {i, j - 1}, {i, j + 1}],
+              i2 in 0..70,
+              j2 in 0..70,
+              {i2, j2} not in rocks,
+              reduce: queue do
+            queue -> :queue.in({{i2, j2}, cost + 1}, queue)
+          end
+
+        bfs(queue, rocks, seen)
+    end
   end
 
   def part2(input) do
@@ -157,11 +193,15 @@ end
 ```
 
 ```elixir
-AoC2024.Day18.part1(input)
+AoC2024.Day18.part1_dijkstra(input)
+```
+
+```elixir
+AoC2024.Day18.part1_bfs(input)
 ```
 
 ```elixir
 AoC2024.Day18.part2(input)
 ```
 
-<!-- livebook:{"offset":3675,"stamp":{"token":"XCP.iQGKgastBroPNrk4WESiEyDyj3dV1w6R5aVg0KPZWJSrwYZP2k5QyBUX_ILlu__nYCaIS0fKPudRylB4KfYpDXR6UroorAA357tBMMG1rfmBRj8Wowk","version":2}} -->
+<!-- livebook:{"offset":4535,"stamp":{"token":"XCP.Qku_rHYdWuwLF-VXKtDnb4o1SZ01olyaqh_nQYzhofd_zQna6uT60LwOTdC3U_KkLcodj5hcoUjf2H9SlYedx84G4ZkLu6OsjCZssBJB_Li3GvoU24E","version":2}} -->
