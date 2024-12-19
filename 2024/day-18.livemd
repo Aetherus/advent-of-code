@@ -1,0 +1,167 @@
+# Advent of Code 2024 - Day 18
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.7"}
+])
+```
+
+## Section
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiIxOCIsInNlc3Npb25fc2VjcmV0IjoiQU9DX1NFU1NJT04iLCJ5ZWFyIjoiMjAyNCJ9","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "18", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+input =
+  puzzle_input
+  |> String.split(~r/\D+/)
+  |> Stream.map(&String.to_integer/1)
+  |> Stream.chunk_every(2)
+  |> Enum.map(&List.to_tuple/1)
+```
+
+```elixir
+defmodule PQ do
+  defstruct tree: nil, map: %{}
+
+  def new() do
+    %__MODULE__{}
+  end
+
+  def push(%__MODULE__{tree: tree, map: map} = pq, value, priority) do
+    if map[value] <= priority do
+      pq
+    else
+      map = Map.put(map, value, priority)
+      tree = meld(tree, {priority, value, []})
+      %__MODULE__{tree: tree, map: map}
+    end
+  end
+
+  def pop(%__MODULE__{tree: nil}) do
+    :empty
+  end
+
+  def pop(%__MODULE__{tree: {priority, value, children}, map: map}) do    
+    tree = pair(children)
+
+    if map[value] == priority do
+      map = Map.delete(map, value)
+      {:ok, value, priority, %__MODULE__{tree: tree, map: map}}
+    else
+      pop(%__MODULE__{tree: tree, map: map})
+    end
+  end
+
+  def member?(%__MODULE__{map: map}, value) do
+    Map.has_key?(map, value)
+  end
+
+  def priority(%__MODULE__{map: map}, value) do
+    map[value]
+  end
+
+  defp meld(nil, tree), do: tree
+  defp meld(tree, nil), do: tree
+  defp meld({p1, v1, c1} = t1, {p2, v2, c2} = t2) do
+    if p1 < p2 do
+      {p1, v1, [t2 | c1]}
+    else
+      {p2, v2, [t1 | c2]}
+    end
+  end
+
+  defp pair([]), do: nil
+  defp pair([tree]), do: tree
+  defp pair([t1, t2 | rest]) do
+    meld(meld(t1, t2), pair(rest))
+  end
+end
+```
+
+```elixir
+defmodule AoC2024.Day18 do
+  def part1(input) do
+    rocks = MapSet.new(Enum.take(input, 1024))
+    
+    graph =
+      for i <- 0..70, j <- 0..70, reduce: %{} do
+        graph ->
+          neighbors =
+            [{i - 1, j}, {i + 1, j}, {i, j - 1}, {i, j + 1}]
+            |> Enum.filter(fn {i2, j2} ->
+              i2 in 0..70 and j2 in 0..70 and {i2, j2} not in rocks
+            end)
+
+          Map.put(graph, {i, j}, neighbors)
+      end
+    
+    pq = PQ.new() |> PQ.push({0, 0}, 0)
+
+    dijkstra(pq, graph, {70, 70}, %{})
+  end
+
+  def part2(input) do
+    input
+    |> Stream.scan([], &merge/2)
+    |> Enum.find_index(&blocked?/1)
+    |> then(&Enum.at(input, &1))
+  end
+
+  defp merge({i, j}, chunks) do
+    {adjacent_chunks, other_chunks} = Enum.split_with(chunks, fn chunk ->
+      for i2 <- i - 1..i + 1, j2 <- j - 1..j + 1 do
+        {i2, j2}
+      end
+      |> Enum.any?(& &1 in chunk)
+    end)
+
+    [Enum.reduce(adjacent_chunks, MapSet.new([{i, j}]), &MapSet.union/2) | other_chunks]
+  end
+
+  defp blocked?(chunks) do    
+    Enum.any?(chunks, fn chunk ->
+      {{imin, _}, {imax, _}} = Enum.min_max(chunk)
+      {{_, jmin}, {_, jmax}} = Enum.min_max_by(chunk, &elem(&1, 1))
+
+      imin == 0 and imax == 70 or jmin == 0 and jmax == 70
+    end)
+  end
+  
+  defp dijkstra(pq, graph, target, seen) do
+    {:ok, coord, priority, pq} = PQ.pop(pq)
+
+    cond do
+      coord == target ->
+        priority
+
+      seen[coord] <= priority ->
+        dijkstra(pq, graph, target, seen)
+
+      true ->
+        seen = Map.put(seen, coord, priority)
+        
+        pq =
+          for neighbor <- graph[coord], reduce: pq do
+            pq -> PQ.push(pq, neighbor, priority + 1)
+          end
+
+        dijkstra(pq, graph, target, seen)
+    end
+  end
+end
+```
+
+```elixir
+AoC2024.Day18.part1(input)
+```
+
+```elixir
+AoC2024.Day18.part2(input)
+```
+
+<!-- livebook:{"offset":3675,"stamp":{"token":"XCP.iQGKgastBroPNrk4WESiEyDyj3dV1w6R5aVg0KPZWJSrwYZP2k5QyBUX_ILlu__nYCaIS0fKPudRylB4KfYpDXR6UroorAA357tBMMG1rfmBRj8Wowk","version":2}} -->
