@@ -1,0 +1,229 @@
+# Advent of Code 2024 - Day 17
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.7"}
+])
+```
+
+## Section
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiIxNyIsInNlc3Npb25fc2VjcmV0IjoiQU9DX1NFU1NJT04iLCJ5ZWFyIjoiMjAyNCJ9","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "17", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+```elixir
+input_lines =
+  puzzle_input
+  |> String.split("\n")
+```
+
+```elixir
+ax = input_lines |> Enum.at(0) |> String.split() |> Enum.at(2) |> String.to_integer()
+```
+
+```elixir
+bx = input_lines |> Enum.at(1) |> String.split() |> Enum.at(2) |> String.to_integer()
+```
+
+```elixir
+cx = input_lines |> Enum.at(2) |> String.split() |> Enum.at(2) |> String.to_integer()
+```
+
+```elixir
+program =
+  input_lines
+  |> Enum.at(-1)
+  |> String.split()
+  |> Enum.at(-1)
+  |> String.split(",")
+  |> Enum.map(&String.to_integer/1)
+  |> List.to_tuple()
+```
+
+1. `B = a`
+2. `B = B ^ 1`
+3. `C = A >> B`
+4. `B = B ^ 5`
+5. `B = B ^ C`
+6. `print b`
+7. `A = A >> 3`
+8. start over again if `A != 0`
+
+```elixir
+defmodule Computer do
+  @compile :inline
+  
+  import Bitwise
+  
+  @adv 0
+  @bxl 1
+  @bst 2
+  @jnz 3
+  @bxc 4
+  @out 5
+  @bdv 6
+  @cdv 7
+
+  @mask (1 <<< 32) - 1
+  
+  def run(program, ax, bx, cx) do    
+    context = %{
+      program: program,
+      cursor: 0,
+      ax: ax,
+      bx: bx,
+      cx: cx,
+      output: []
+    }
+
+    context
+    |> Stream.iterate(&eval/1)
+    |> Enum.find(fn context ->
+      context.cursor >= tuple_size(program) - 1
+    end)
+    |> Map.get(:output)
+    |> Enum.reverse()
+    |> List.to_tuple()
+  end
+
+  defp eval(context) do
+    instruction = elem(context.program, context.cursor)
+    operand = elem(context.program, context.cursor + 1)
+    eval_instruction(instruction, operand, context)
+  end
+
+  defp eval_instruction(@adv, n, context) do
+    quotient = context.ax >>> combo(n, context)
+    %{context | ax: quotient, cursor: context.cursor + 2}
+  end
+
+  defp eval_instruction(@bxl, n, context) do
+    %{context | bx: bxor(context.bx, n) &&& @mask, cursor: context.cursor + 2}
+  end
+
+  defp eval_instruction(@bst, n, context) do
+    %{context | bx: combo(n, context) &&& 7, cursor: context.cursor + 2}
+  end
+
+  defp eval_instruction(@jnz, n, context) do
+    if context.ax == 0 do
+      %{context | cursor: context.cursor + 2}
+    else
+      %{context | cursor: n}
+    end
+  end
+
+  defp eval_instruction(@bxc, _n, context) do
+    %{context | bx: bxor(context.bx, context.cx), cursor: context.cursor + 2}
+  end
+
+  defp eval_instruction(@out, n, context) do
+    %{context | output: [combo(n, context) &&& 7 | context.output], cursor: context.cursor + 2}
+  end
+
+  defp eval_instruction(@bdv, n, context) do
+    quotient = context.ax >>> combo(n, context)
+    %{context | bx: quotient, cursor: context.cursor + 2}
+  end
+
+  defp eval_instruction(@cdv, n, context) do
+    quotient = context.ax >>> combo(n, context)
+    %{context | cx: quotient, cursor: context.cursor + 2}
+  end
+
+  defp combo(4, context) do
+    context.ax
+  end
+
+  defp combo(5, context) do
+    context.bx
+  end
+
+  defp combo(6, context) do
+    context.cx
+  end
+
+  defp combo(7, _context) do
+    raise RuntimeError, "Not implemented"
+  end
+
+  defp combo(n, _context) when n <= 3 do
+    n
+  end
+end
+```
+
+```elixir
+Computer.run(program, ax, bx, cx)
+```
+
+```
+out = a ^ 4 ^ ((A >> (a ^ 1)) & 7)
+```
+
+```
+((A >> (a ^ 1)) & 7) ^ a ^ 4 = output
+```
+
+```elixir
+defmodule AoC2024.Day17.Part2 do
+  import Bitwise
+
+  def crack(program) do
+    program
+    |> Tuple.to_list()
+    |> Enum.reverse()
+    |> crack(0, 0)
+  end
+  
+  def crack([h | t], a, acc) do
+    acc2 = acc |> bsl(3) |> bor(a)
+    
+    p =
+      acc2
+      |> bsr(bxor(a, 1))
+      |> band(7)
+      |> bxor(a)
+      |> bxor(4)
+
+    cond do
+      p != h and a < 7 ->
+        crack([h | t], a + 1, acc)
+
+      p != h ->
+        false
+
+      result = crack(t, 0, acc2) ->
+        result
+
+      a < 7 ->
+        crack([h | t], a + 1, acc)
+
+      true ->
+        false
+    end
+  end
+
+  def crack([], _a, acc) do
+    acc
+  end
+end
+```
+
+```elixir
+cracked = AoC2024.Day17.Part2.crack(program)
+```
+
+```elixir
+Computer.run(program, cracked, 0, 0) == program
+```
+
+<!-- livebook:{"offset":4263,"stamp":{"token":"XCP.5HAlzrwZleHvPFB1uZglQ8l2HInLLJ28bzPonFPvW5yfw5L7D8mYDQHxHgxH0KJpiJP7P4PCLUEb4ggfzTOIyv0sOoH5oZGUG0pUv3vGKfpue0HYWsA","version":2}} -->
