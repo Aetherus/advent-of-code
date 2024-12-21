@@ -1,0 +1,329 @@
+# Advent of Code 2024 - Day 16
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.7"}
+])
+```
+
+## Input Parsing
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiIxNiIsInNlc3Npb25fc2VjcmV0IjoiQU9DX1NFU1NJT04iLCJ5ZWFyIjoiMjAyNCJ9","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "16", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+test_input = """
+#################
+#...#...#...#..E#
+#.#.#.#.#.#.#.#.#
+#.#.#.#...#...#.#
+#.#.#.#.###.#.#.#
+#...#.#.#.....#.#
+#.#.#.#.#.#####.#
+#.#...#.#.#.....#
+#.#.#####.#.###.#
+#.#.#.......#...#
+#.#.###.#####.###
+#.#.#...#.....#.#
+#.#.#.#####.###.#
+#.#.#.........#.#
+#.#.#.#########.#
+#S#.............#
+#################
+"""
+|> String.trim()
+```
+
+```elixir
+input = puzzle_input
+```
+
+```elixir
+IO.puts(input)
+```
+
+```elixir
+maze =
+  for {row, i} <- input |> String.split() |> Enum.with_index(),
+      {val, j} <- row |> String.to_charlist() |> Enum.with_index(),
+      val in [?., ?S, ?E],
+      into: %{},
+      do: {{i, j}, val}
+```
+
+```elixir
+map_size(maze)
+```
+
+```elixir
+start = Enum.find(maze, fn {_, val} ->
+  val == ?S
+end)
+|> elem(0)
+```
+
+```elixir
+goal = Enum.find(maze, fn {_, val} ->
+  val == ?E
+end)
+|> elem(0)
+```
+
+```elixir
+graph =
+  maze
+  |> Enum.filter(fn {{i, j}, char} ->
+    cv = Enum.count([{i - 1, j}, {i + 1, j}], &maze[&1])
+    ch = Enum.count([{i, j - 1}, {i, j + 1}], &maze[&1])
+    
+    (cv > 0 and ch > 0) or (char in [?S, ?E])
+  end)
+  |> Enum.map(&elem(&1, 0))
+  |> Map.new(&{&1, []})
+```
+
+```elixir
+graph =
+  graph
+  |> Enum.reduce(%{}, fn {{i, j}, _}, g ->
+    n1 =
+      {i - 1, j}
+      |> Stream.iterate(fn {i2, j2} -> {i2 - 1, j2} end)
+      |> Stream.take_while(&maze[&1])
+      |> Enum.find(&graph[&1])
+
+    n2 =
+      {i + 1, j}
+      |> Stream.iterate(fn {i2, j2} -> {i2 + 1, j2} end)
+      |> Stream.take_while(&maze[&1])
+      |> Enum.find(&graph[&1])
+
+    n3 =
+      {i, j - 1}
+      |> Stream.iterate(fn {i2, j2} -> {i2, j2 - 1} end)
+      |> Stream.take_while(&maze[&1])
+      |> Enum.find(&graph[&1])
+
+    n4 =
+      {i, j + 1}
+      |> Stream.iterate(fn {i2, j2} -> {i2, j2 + 1} end)
+      |> Stream.take_while(&maze[&1])
+      |> Enum.find(&graph[&1])
+
+    neighbors = [n1, n2, n3, n4] |> Enum.reject(&is_nil/1) |> Enum.filter(&graph[&1])
+
+    Map.put(g, {i, j}, neighbors)
+  end)
+```
+
+```elixir
+defmodule PQ do
+  defstruct tree: nil, map: %{}
+
+  def new do
+    %__MODULE__{}
+  end
+
+  def push(%__MODULE__{tree: tree, map: map} = heap, value, priority) do
+    if map[value] <= priority do
+      heap
+    else
+      tree = meld(tree, {priority, value, []})
+      map = Map.put(map, value, priority)
+      %__MODULE__{tree: tree, map: map}
+    end
+  end
+
+  def pop(%__MODULE__{tree: nil}) do
+    :empty
+  end
+
+  def pop(%__MODULE__{tree: {priority, value, children}, map: map}) do
+    tree = pair(children)
+    
+    if map[value] == priority do
+      map = Map.delete(map, value)
+      heap = %__MODULE__{tree: tree, map: map}
+      {:ok, value, priority, heap}
+    else
+      pop(%__MODULE__{tree: tree, map: map})
+    end
+  end
+  
+  defp meld(nil, tree), do: tree
+  defp meld(tree, nil), do: tree
+  defp meld({p1, v1, c1} = t1, {p2, v2, c2} = t2) do
+    if p1 < p2 do
+      {p1, v1, [t2 | c1]}
+    else
+      {p2, v2, [t1 | c2]}
+    end
+  end
+
+  defp pair([]), do: nil
+  defp pair([tree]), do: tree
+  defp pair([t1, t2 | rest]) do
+    meld(meld(t1, t2), pair(rest))
+  end
+end
+```
+
+```elixir
+defmodule AoC2024.Day16.Part1 do
+  def run(graph, start, goal) do
+    pq = PQ.new() |> PQ.push({{0, 1}, [start]}, 0)
+    dijkstra(pq, %{}, graph, goal)
+  end
+
+  defp dijkstra(pq, seen, graph, goal) do
+    case PQ.pop(pq) do
+      :empty ->
+        nil
+        
+      {:ok, {dir, [curr | _] = path}, score, pq} ->
+        cond do
+          curr == goal ->
+            {path, score}
+    
+          seen[{curr, dir}] <= score ->
+            dijkstra(pq, seen, graph, goal)
+    
+          true ->
+            seen = Map.put(seen, {curr, dir}, score)
+    
+            pq =
+              for neighbor <- graph[curr], reduce: pq do
+                pq ->
+                  s = subtract(neighbor, curr)
+                  dir2 = normalize(s)
+                  distance = norm(s)
+      
+                  case dot(dir, dir2) do
+                    1 -> PQ.push(pq, {dir2, [neighbor | path]}, score + distance)
+                    0 -> PQ.push(pq, {dir2, [neighbor | path]}, score + distance + 1000)
+                    -1 -> pq
+                  end
+              end
+    
+            dijkstra(pq, seen, graph, goal)
+        end
+    end
+  end
+
+  defp subtract({i1, j1}, {i2, j2}) do
+    {i1 - i2, j1 - j2}
+  end
+
+  defp norm({i, j}) do
+    abs(i) + abs(j)
+  end
+
+  defp dot({i1, j1}, {i2, j2}) do
+    i1 * i2 + j1 * j2
+  end
+
+  defp normalize({i, 0}) do
+    {div(i, abs(i)), 0}
+  end
+
+  defp normalize({0, j}) do
+    {0, div(j, abs(j))}
+  end
+end
+```
+
+```elixir
+{path, min_score} = AoC2024.Day16.Part1.run(graph, start, goal)
+```
+
+```elixir
+min_score
+```
+
+```elixir
+defmodule AoC2024.Day16.Part2 do
+  def run(graph, start, goal, min_score) do
+    pq = PQ.new() |> PQ.push({{0, 1}, [start]}, 0)
+    dijkstra(pq, %{}, graph, goal, min_score, MapSet.new())
+  end
+
+  defp dijkstra(pq, seen, graph, goal, min_score, acc) do
+    case PQ.pop(pq) do
+      :empty ->
+        acc
+        
+      {:ok, {dir, [curr | _] = path}, score, pq} ->
+        cond do
+          curr == goal and score > min_score ->
+            acc
+
+          curr == goal ->
+            acc = path |> expand_path() |> MapSet.union(acc)
+            dijkstra(pq, seen, graph, goal, min_score, acc)
+    
+          seen[{curr, dir}] < score ->
+            dijkstra(pq, seen, graph, goal, min_score, acc)
+    
+          true ->
+            seen = Map.put(seen, {curr, dir}, score)
+    
+            pq =
+              for neighbor <- graph[curr], reduce: pq do
+                pq ->
+                  s = subtract(neighbor, curr)
+                  dir2 = normalize(s)
+                  distance = norm(s)
+      
+                  case dot(dir, dir2) do
+                    1 -> PQ.push(pq, {dir2, [neighbor | path]}, score + distance)
+                    0 -> PQ.push(pq, {dir2, [neighbor | path]}, score + distance + 1000)
+                    -1 -> pq
+                  end
+              end
+    
+            dijkstra(pq, seen, graph, goal, min_score, acc)
+        end
+    end
+  end
+
+  defp subtract({i1, j1}, {i2, j2}) do
+    {i1 - i2, j1 - j2}
+  end
+
+  defp norm({i, j}) do
+    abs(i) + abs(j)
+  end
+
+  defp dot({i1, j1}, {i2, j2}) do
+    i1 * i2 + j1 * j2
+  end
+
+  defp normalize({i, 0}) do
+    {div(i, abs(i)), 0}
+  end
+
+  defp normalize({0, j}) do
+    {0, div(j, abs(j))}
+  end
+
+  def expand_path(path) do
+    path
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.flat_map(fn
+      [{i1, j}, {i2, j}] -> Enum.map(i1..i2, &{&1, j})
+      [{i, j1}, {i, j2}] -> Enum.map(j1..j2, &{i, &1})
+    end)
+    |> MapSet.new()
+  end
+end
+```
+
+```elixir
+AoC2024.Day16.Part2.run(graph, start, goal, min_score) |> MapSet.size()
+```
+
+<!-- livebook:{"offset":7068,"stamp":{"token":"XCP.VE2VI_wASqbw6u4dMjKjcbrr1EsM_f3b-4DZ5UE8jLdUJZJQMIhWrv0WFwjdX6ZgC8xCLXIdSgHgX2FI0HvRGb0WuNhe3MhWh0mkJNHc4oRRcsp1wMs","version":2}} -->
