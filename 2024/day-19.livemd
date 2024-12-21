@@ -1,0 +1,79 @@
+# Advent of Code 2024 - Day 19
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.7"}
+])
+```
+
+## Section
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiIxOSIsInNlc3Npb25fc2VjcmV0IjoiQU9DX1NFU1NJT04iLCJ5ZWFyIjoiMjAyNCJ9","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "19", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+[towels, _ | designs] = String.split(puzzle_input, "\n")
+```
+
+```elixir
+towels = String.split(towels, ", ")
+```
+
+```elixir
+defmodule AoC2024.Day19 do
+  def run(towels, patterns) do
+    Task.async(fn ->
+      Enum.map(patterns, &combo(towels, towels, &1))
+    end)
+    |> Task.await(:infinity)
+  end
+
+  defp combo(_, _, "") do
+    1
+  end
+
+  defp combo([], _, _pattern) do
+    0
+  end
+
+  defp combo([towel | rest_towels], all_towels, pattern) do
+    memoized(pattern, fn ->      
+      case pattern do
+        ^towel <> rest_pattern ->
+          combo1 = combo(all_towels, all_towels, rest_pattern)
+          combo2 = combo(rest_towels, all_towels, pattern)
+      
+          combo1 + combo2
+        _ ->
+          combo(rest_towels, all_towels, pattern)
+      end
+    end)
+  end
+
+  defp memoized(key, fun) do
+    with :miss <- Process.get(key, :miss) do
+      fun.() |> tap(&Process.put(key, &1))
+    end
+  end
+end
+```
+
+## Part 1
+
+```elixir
+AoC2024.Day19.run(towels, designs)
+|> Enum.count(& &1 > 0)
+```
+
+## Part 2
+
+```elixir
+AoC2024.Day19.run(towels, designs)
+|> Enum.sum()
+```
+
+<!-- livebook:{"offset":1528,"stamp":{"token":"XCP.hkZgmf0UZ1ZbfTP3KyP2jrkeQA_YjEjM3PT1Jzh8im-oqmzxKRLw9ArwDUoMqK77cumgF0ofj0-UuxNKgf4VwldTXiXehD_1Lj0jeziCxlEMUbMeZnw","version":2}} -->
