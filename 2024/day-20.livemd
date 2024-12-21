@@ -1,0 +1,137 @@
+# Advent of Code 2024 - Day 20
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.7"}
+])
+```
+
+## Section
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiIyMCIsInNlc3Npb25fc2VjcmV0IjoiQU9DX1NFU1NJT04iLCJ5ZWFyIjoiMjAyNCJ9","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "20", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+```elixir
+maze =
+  for {row, i} <- puzzle_input |> String.split("\n") |> Enum.with_index(),
+      {val, j} <- row |> String.to_charlist() |> Enum.with_index(),
+      val != ?#,
+      into: %{},
+      do: {{i, j}, val}
+```
+
+```elixir
+{imax, jmax} = Enum.max(maze) |> elem(0)
+```
+
+```elixir
+start = Enum.find(maze, fn {_, char} -> char == ?S end) |> elem(0)
+```
+
+```elixir
+goal = Enum.find(maze, fn {_, char} -> char == ?E end) |> elem(0)
+```
+
+```elixir
+maze = MapSet.new(Map.keys(maze))
+```
+
+```elixir
+defmodule AoC2024.Day20 do
+  def path(maze, start, goal) do
+    queue = :queue.from_list([[{start, 0}]])
+
+    seen = MapSet.new()
+    
+    bfs(queue, goal, maze, seen)
+  end
+
+  def cheats(path, size) do
+    cheats(path, size, 0)
+  end
+
+  defp cheats([], _, acc) do
+    acc
+  end
+
+  defp cheats([{{i1, j1}, cost1} | rest], size, acc) do
+    count =
+      rest
+      |> Stream.map(fn {{i2, j2}, cost2} ->
+        old_dist = cost1 - cost2
+        new_dist = abs(i1 - i2) + abs(j1 - j2)
+        old_dist - new_dist
+        {new_dist, old_dist - new_dist}
+      end)
+      |> Stream.filter(&elem(&1, 0) <= size)
+      |> Stream.filter(&elem(&1, 1) >= 100)
+      |> Enum.count()
+
+    cheats(rest, size, acc + count)
+  end
+  
+  @empty_queue :queue.new()
+  
+  defp bfs(@empty_queue, _goal, _maze, _seen) do
+    nil
+  end
+
+  defp bfs(queue, goal, maze, seen) do
+    {
+      { :value, [{{i, j}, cost} | _] = path },
+      queue
+    } = :queue.out(queue)
+
+    cond do
+      {i, j} == goal ->
+        path
+
+      {i, j} in seen ->
+        bfs(queue, goal, maze, seen)
+
+      true ->
+        seen = MapSet.put(seen, {i, j})
+
+        queue =
+          for neighbor <- [
+                {i, j - 1},
+                {i, j + 1},
+                {i - 1, j},
+                {i + 1, j}
+              ],
+              neighbor in maze,
+              reduce: queue do
+            queue -> :queue.in([{neighbor, cost + 1} | path], queue)
+          end
+
+        bfs(queue, goal, maze, seen)
+    end
+  end
+end
+```
+
+```elixir
+path = AoC2024.Day20.path(maze, start, goal)
+```
+
+## Part 1
+
+```elixir
+AoC2024.Day20.cheats(path, 2)
+```
+
+## Part 2
+
+```elixir
+AoC2024.Day20.cheats(path, 20)
+```
+
+<!-- livebook:{"offset":2641,"stamp":{"token":"XCP.cHfh7DNg7Q_0i-1uCKVCmIBVmBs6hERfzNzMRjrc9DXgn3BrbxZmIjPXIiqF1S9OqpgTPL555Lm7YNsUBRlQDZHdK3WcHurDGh1nSyuOO5m-3i1lWrk","version":2}} -->
