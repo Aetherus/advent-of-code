@@ -1,0 +1,73 @@
+# Advent of Code 2024 - Day 24 - fork
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.7"},
+  {:libgraph, "~> 0.16.0"}
+])
+```
+
+## Section
+
+```elixir
+import Bitwise
+```
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiIyNCIsInNlc3Npb25fc2VjcmV0IjoiQU9DX1NFU1NJT04iLCJ5ZWFyIjoiMjAyNCJ9","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "24", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+## Part 1
+
+```elixir
+{inputs, ["" | exprs]} =
+  puzzle_input
+  |> String.split("\n")
+  |> Enum.split_while(& &1 != "")
+```
+
+```elixir
+graph =
+  exprs
+  |> Enum.flat_map_reduce(0, fn line, seq ->
+    [wire1, op, wire2, "->", wire3] = String.split(line)
+
+    {[
+      {wire1, wire3, {:"b#{String.downcase(op)}", seq}},
+      {wire2, wire3, {:"b#{String.downcase(op)}", seq}}
+    ], seq + 1}
+  end)
+  |> elem(0)
+  |> Enum.reduce(Graph.new(), fn {in_wire, out_wire, gate}, graph ->
+    Graph.add_edge(graph, in_wire, out_wire, label: gate)
+  end)
+```
+
+## Part 2
+
+### Notations
+
+$$\odot$$ = AND
+
+$$\oplus$$ = OR
+
+$$\otimes$$ = XOR
+
+$$c_i$$ is the carry bit generated at the i-th position
+
+<!-- livebook:{"break_markdown":true} -->
+
+$$z_0 = x_0 \otimes y_0$$
+
+$$z_{45} = c_{44}$$
+
+$$z_i = (x_i \otimes y_i) \otimes c_{i-1}$$
+
+$$c_0 = x_0 \odot y_0$$
+
+$$c_i = (x_i \odot y_i) \oplus ((x_i \otimes y_i) \odot c_{i-1})$$
+
+<!-- livebook:{"offset":1417,"stamp":{"token":"XCP.bPhLXQ_PWQAceFvkmG6CSeNWo2goKZgpqWmmYfJ4wAK-rdn-7XmFxoqcWnKaFye6qcjvGJZc2LrSYgNq3eF0eaehhcICzjkTf7K8oDjPtqUAWHHQmRc","version":2}} -->

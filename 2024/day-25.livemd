@@ -1,0 +1,58 @@
+# Advent of Code 2024 - Day 25
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.7"}
+])
+```
+
+## Section
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiIyNSIsInNlc3Npb25fc2VjcmV0IjoiQU9DX1NFU1NJT04iLCJ5ZWFyIjoiMjAyNCJ9","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "25", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+{locks, keys} =
+  puzzle_input
+  |> String.split("\n\n")
+  |> Enum.split_with(&match?("#" <> _, &1))
+```
+
+```elixir
+locks =
+  locks
+  |> Enum.map(fn str ->
+    str
+    |> String.split()
+    |> Enum.map(&String.to_charlist/1)
+    |> Enum.zip_with(&Function.identity/1)
+    |> Enum.map(&Enum.count(&1, fn char -> char == ?# end))
+  end)
+```
+
+```elixir
+keys =
+  keys
+  |> Enum.map(fn str ->
+    str
+    |> String.split()
+    |> Enum.map(&String.to_charlist/1)
+    |> Enum.zip_with(&Function.identity/1)
+    |> Enum.map(&Enum.count(&1, fn char -> char == ?# end))
+  end)
+```
+
+```elixir
+for lock <- locks,
+    key <- keys,
+    zipped = Enum.zip_with(lock, key, fn n1, n2 -> n1 + n2 end),
+    Enum.all?(zipped, & &1 <= 7),
+    reduce: 0,
+    do: (count -> count + 1)
+```
+
+<!-- livebook:{"offset":1215,"stamp":{"token":"XCP.7asIpzUwoC9p3TEc0rp5GV73YQCOMxqYBmHd4iLxX7pird9eFO8eeJPqkp_j2P4d7y-Fi4o_Q44SsKcubk0UJjXKh3dj55qIMxohKAgYeCh3HYOdeFI","version":2}} -->

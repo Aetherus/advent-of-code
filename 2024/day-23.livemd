@@ -1,0 +1,95 @@
+# Advent of Code 2024 - Day 23
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.7"},
+  {:libgraph, "~> 0.13.3"}
+])
+```
+
+## Section
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiIyMyIsInNlc3Npb25fc2VjcmV0IjoiQU9DX1NFU1NJT04iLCJ5ZWFyIjoiMjAyNCJ9","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "23", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+defmodule MyList do
+  def combinations(_, 0) do
+    [[]]
+  end
+
+  def combinations(ls, k) when length(ls) < k do
+    []
+  end
+
+  def combinations([h | t], k) do
+    for combo <- combinations(t, k - 1) do
+      [h | combo]
+    end
+    |> Kernel.++(combinations(t, k))
+  end
+end
+```
+
+```elixir
+import MyList
+```
+
+```elixir
+combinations([1,2,3,4,5,6], 0)
+```
+
+```elixir
+graph =
+  puzzle_input
+  |> String.split(~r/\W/)
+  |> Enum.chunk_every(2)
+  |> Enum.map(&List.to_tuple/1)
+  |> then(fn edges ->
+    Graph.new(type: :undirected)
+    |> Graph.add_edges(edges)
+  end)
+```
+
+## Part 1
+
+```elixir
+graph
+|> Graph.cliques()
+|> Enum.map(fn clique ->
+  Enum.split_with(clique, &match?(<<?t, _>>, &1))
+end)
+|> Enum.flat_map(fn {t, nt} ->
+  c1 =
+    for a <- combinations(t, 1), b <- combinations(nt, 2) do
+      a ++ b
+    end
+
+  c2 =
+    for a <- combinations(t, 2), b <- combinations(nt, 1) do
+      a ++ b
+    end
+
+  c3 = combinations(t, 3)
+
+  Enum.flat_map([c1, c2, c3], &Function.identity/1)
+end)
+|> Enum.uniq()
+|> length()
+```
+
+## Part 2
+
+```elixir
+graph
+|> Graph.cliques()
+|> Enum.max_by(&length/1)
+|> Enum.sort()
+|> Enum.join(",")
+```
+
+<!-- livebook:{"offset":1610,"stamp":{"token":"XCP.qMkJGDaD2ekwxA_J0LTun5llQQh6G-_UYwp069BupcDeL0XAFrQrDAxqFKT7rzOmAiBNABzV7I8dBuPUxj2ScIaH3_0AvpRVWzj8SC2VhJYpZYuhMxE","version":2}} -->

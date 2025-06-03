@@ -1,0 +1,91 @@
+# Advent of Code 2024 - Day 22
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.7"}
+])
+```
+
+## Section
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiIyMiIsInNlc3Npb25fc2VjcmV0IjoiQU9DX1NFU1NJT04iLCJ5ZWFyIjoiMjAyNCJ9","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "22", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+:math.log2(16777216) |> trunc()
+```
+
+```elixir
+defmodule AoC2024.Day22 do
+  import Bitwise
+
+  @modulo (16777216 - 1)
+  
+  def rand(seed) do
+    seed =
+      seed
+      |> bsl(6)
+      |> bxor(seed)
+      |> band(@modulo)
+
+    seed =
+      seed
+      |> bsr(5)
+      |> bxor(seed)
+      |> band(@modulo)
+
+    
+    seed
+    |> bsl(11)
+    |> bxor(seed)
+    |> band(@modulo)
+  end
+end
+```
+
+```elixir
+input =
+  puzzle_input
+  |> String.split()
+  |> Enum.map(&String.to_integer/1)
+```
+
+```elixir
+input
+|> Enum.map(fn initial ->
+  initial
+  |> Stream.iterate(&AoC2024.Day22.rand/1)
+  |> Enum.at(2000)
+end)
+|> Enum.sum()
+```
+
+```elixir
+input
+|> Stream.map(fn initial ->
+  initial
+  |> Stream.iterate(&AoC2024.Day22.rand/1)
+  |> Stream.take(2001)
+  |> Stream.map(&rem(&1, 10))
+  |> Stream.chunk_every(2, 1, :discard)
+  |> Stream.map(fn [a, b] -> {b - a, b} end)
+  |> Stream.chunk_every(4, 1, :discard)
+  |> Stream.map(fn chunk ->
+    {Enum.map(chunk, &elem(&1, 0)), elem(List.last(chunk), 1)}
+  end)
+  |> Enum.reduce(%{}, fn {k, v}, acc ->
+    Map.update(acc, k, v, & &1)
+  end)
+end)
+|> Enum.reduce(fn map1, map2 ->
+  Map.merge(map1, map2, fn _k, v1, v2 -> v1 + v2 end)
+end)
+|> Stream.map(&elem(&1, 1))
+|> Enum.max()
+```
+
+<!-- livebook:{"offset":1663,"stamp":{"token":"XCP.Jhg_2Pk_QFkIYOucHOwBgYN-kBy03b5chmR0MfY2KVWur6_54FH6BJ3B63gG8MmTjoKN39PqdxGNjaoO5FquhD_DelUhuWE1tSDjWNZMoOlUn2A-rUo","version":2}} -->

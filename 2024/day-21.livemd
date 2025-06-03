@@ -1,0 +1,216 @@
+# Advent of Code 2024 - Day 21
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.7"}
+])
+```
+
+## Section
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiIyMSIsInNlc3Npb25fc2VjcmV0IjoiQU9DX1NFU1NJT04iLCJ5ZWFyIjoiMjAyNCJ9","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "21", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+input = String.split(puzzle_input) |> Enum.map(&String.to_charlist/1)
+```
+
+```elixir
+sample_input = """
+029A
+980A
+179A
+456A
+379A
+"""
+|> String.split()
+|> Enum.map(&String.to_charlist/1)
+```
+
+```elixir
+defmodule AoC2024.Day21 do
+  @npad %{
+    ?A => {2, 0},
+    ?0 => {1, 0},
+    ?1 => {0, 1},
+    ?2 => {1, 1},
+    ?3 => {2, 1},
+    ?4 => {0, 2},
+    ?5 => {1, 2},
+    ?6 => {2, 2},
+    ?7 => {0, 3},
+    ?8 => {1, 3},
+    ?9 => {2, 3}
+  }
+
+  @dpad %{
+    ?A => {2, 1},
+    {-1, 0} => {0, 0},
+    {1, 0} => {2, 0},
+    {0, 1} => {1, 1},
+    {0, -1} => {1, 0}
+  }
+
+  @inv_npad Map.new(@npad, fn {k, v} -> {v, k} end)
+
+  @inv_dpad Map.new(@dpad, fn {k, v} -> {v, k} end)
+
+  @order ([{1, 0}, {0, 1}, {0, -1}, {-1, 0}] |> Enum.with_index() |> Map.new())
+
+  def solve(code, dpads) do
+    [a, b, c, d] =
+      [?A | code]
+      |> Enum.map(&@npad[&1])
+      |> Enum.chunk_every(2, 1, :discard)
+      |> Enum.map(fn [a, b] ->
+        possible_steps(a, b, @inv_npad)
+      end)
+    
+    for chunk1 <- a,
+        chunk2 <- b,
+        chunk3 <- c,
+        chunk4 <- d do
+      [
+        chunk_length(chunk1, dpads),
+        chunk_length(chunk2, dpads),
+        chunk_length(chunk3, dpads),
+        chunk_length(chunk4, dpads)
+      ]
+      |> Enum.sum()
+    end
+    |> Enum.min()
+  end
+
+  defp chunk_length(chunk, 0) do
+    length(chunk)
+  end
+
+  defp chunk_length(chunk, dpads) do
+    memoized({:chunk_length, chunk, dpads}, fn ->
+      chunk
+      |> expand_chunk()
+      |> Stream.map(&chunk_length(&1, dpads - 1))
+      |> Enum.sum()
+    end)
+  end
+
+  defp expand_chunk(chunk) do
+    memoized({:expand_chunk, chunk}, fn ->
+      [?A | chunk]
+      |> Enum.map(&@dpad[&1])
+      |> Stream.chunk_every(2, 1, :discard)
+      |> Enum.map(fn [prev, next] ->
+        steps(prev, next, @inv_dpad)
+      end)
+    end)
+  end
+
+  defp memoized(key, fun) do
+    with nil <- Process.get(key) do
+      fun.() |> tap(&Process.put(key, &1))
+    end
+  end
+
+  defp steps({x1, y1}, {x2, y2}, inv_pad) do
+    dx = x2 - x1
+    dy = y2 - y1
+  
+    sx = dx > 0 && 1 || dx < 0 && -1 || 0
+    sy = dy > 0 && 1 || dy < 0 && -1 || 0
+  
+    steps =
+      List.duplicate({sx, 0}, abs(dx)) ++ List.duplicate({0, sy}, abs(dy))
+      |> Enum.sort_by(&@order[&1])
+
+    if valid_path?(steps, {x1, y1}, inv_pad) do
+      steps ++ [?A]
+    else
+      Enum.reverse(steps, [?A])
+    end
+  end
+
+  defp possible_steps({x1, y1}, {x2, y2}, inv_pad) do
+    dx = x2 - x1
+    dy = y2 - y1
+  
+    sx = dx > 0 && 1 || dx < 0 && -1 || 0
+    sy = dy > 0 && 1 || dy < 0 && -1 || 0
+
+    h = List.duplicate({sx, 0}, abs(dx))
+    v = List.duplicate({0, sy}, abs(dy))
+  
+    [
+      h ++ v,
+      v ++ h
+    ]
+    |> Enum.filter(&valid_path?(&1, {x1, y1}, inv_pad))
+    |> Enum.map(& &1 ++ [?A])
+  end
+
+  defp valid_path?(path, start, inv_pad) do
+    path
+    |> Stream.scan(start, fn {dx, dy}, {x, y} ->
+      {x + dx, y + dy}
+    end)
+    |> Enum.all?(&inv_pad[&1])
+  end
+end
+```
+
+```elixir
+AoC2024.Day21.solve(~c"379A", 25)
+```
+
+```elixir
+Process.get() |> Enum.filter(fn {k, _} ->
+  match?({:expand_chunk, _}, k)
+end)
+|> length()
+```
+
+```elixir
+Process.get() |> Enum.filter(fn {k, _} ->
+  match?({:chunk_length, _, _}, k)
+end)
+|> length()
+```
+
+```
+<v<A>>^AvA^A<vA<AA>>^AAvA<^A>AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A
+<A>Av<<AA>^AA>AvAA^A<vAAA>^A
+^A<<^^A>>AvvvA
+379A
+```
+
+<!-- livebook:{"break_markdown":true} -->
+
+```
+v<<A>>^AvA^Av<<A>>^AAv<A<A>>^AAvAA^<A>Av<A>^AA<A>Av<A<A>>^AAAvA^<A>A
+<A>A<AAv<AA>>^AvAA^Av<AAA>^A
+^A^^<<A>>AvvvA
+379A
+```
+
+```elixir
+input
+|> Enum.map(fn code ->
+  n = code |> Enum.take(3) |> to_string() |> String.to_integer()
+  len = AoC2024.Day21.solve(code, 25)
+  {len, n}
+end)
+|> Enum.map(fn {len, n} -> len * n end)
+|> Enum.sum()
+```
+
+```elixir
+Process.get() |> Enum.filter(fn {k, _} ->
+  match?({:chunk_length, _, _}, k)
+end)
+|> length()
+```
+
+<!-- livebook:{"offset":4255,"stamp":{"token":"XCP.490BabYrgLo9kGSOvfahdPKF-FXDVvfjH4AQHIyYG2h3lM4HTpq-lvxEZbnngRpRFCPe6ho_9XbwBG3tvi1rNu7J6SSFZVi-rc-lDiaUal4W8kWurzU","version":2}} -->

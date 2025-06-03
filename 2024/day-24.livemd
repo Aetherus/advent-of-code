@@ -1,0 +1,336 @@
+# Advent of Code 2024 - Day 24
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1.7"},
+  {:libgraph, "~> 0.16.0"},
+  {:kino_vega_lite, "~> 0.1.11"},
+  {:kino_explorer, "~> 0.1.20"}
+])
+```
+
+## Section
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiIyNCIsInNlc3Npb25fc2VjcmV0IjoiQU9DX1NFU1NJT04iLCJ5ZWFyIjoiMjAyNCJ9","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "24", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+[consts, exprs] =
+  puzzle_input
+  |> String.split("\n\n")
+```
+
+```elixir
+context =
+  consts
+  |> String.split(~r/\W+/, trim: true)
+  |> Enum.chunk_every(2)
+  |> Enum.map(fn [name, value] ->
+    {name, String.to_integer(value)}
+  end)
+  |> Map.new()
+```
+
+```elixir
+[x, y] =
+  context
+  |> Enum.sort(:desc)
+  |> Enum.map(&elem(&1, 1))
+  |> Enum.split(map_size(context) |> div(2))
+  |> Tuple.to_list()
+  |> Enum.map(&Integer.undigits(&1, 2))
+```
+
+```elixir
+eval = fn graph, x, y ->
+  x_bits =
+    x
+    |> Integer.to_string(2)
+    |> String.pad_leading(45, "0")
+    |> String.reverse()
+    |> String.to_charlist()
+    |> Enum.with_index()
+    |> Enum.map(fn {bit, i} ->
+      n = i |> to_string() |> String.pad_leading(2, "0")
+      {"x#{n}", bit - ?0}
+    end)
+    |> Map.new()
+
+  y_bits =
+    y
+    |> Integer.to_string(2)
+    |> String.pad_leading(45, "0")
+    |> String.reverse()
+    |> String.to_charlist()
+    |> Enum.with_index()
+    |> Enum.map(fn {bit, i} ->
+      n = i |> to_string() |> String.pad_leading(2, "0")
+      {"y#{n}", bit - ?0}
+    end)
+    |> Map.new()
+
+  context = Map.merge(x_bits, y_bits)
+
+  sorted = Graph.topsort(graph)
+
+  Enum.reduce(sorted, context, fn vertex, context ->
+    case Graph.in_edges(graph, vertex) do
+      [] ->
+        context
+        
+      [%Graph.Edge{v1: var1, label: op}, %Graph.Edge{v1: var2, label: op}] ->
+        arg1 = context[var1]
+        arg2 = context[var2]
+        Map.put(context, vertex, apply(Bitwise, op, [arg1, arg2]))
+    end
+  end)
+  |> Enum.filter(fn {k, _} ->
+    String.starts_with?(k, "z")
+  end)
+  |> Enum.sort(:desc)
+  |> Enum.map(&elem(&1, 1))
+  |> Integer.undigits(2)
+end
+```
+
+```elixir
+graph =
+  exprs
+  |> String.split(~r/\W+/, trim: true)
+  |> Enum.chunk_every(4)
+  |> Enum.reduce(Graph.new(), fn [lhs, op, rhs, out], graph ->
+    op = :"b#{String.downcase(op)}"
+    
+    graph
+    |> Graph.add_edge(lhs, out, label: op)
+    |> Graph.add_edge(rhs, out, label: op)
+  end)
+```
+
+## Part 1
+
+```elixir
+eval.(graph, x, y)
+```
+
+## Part 2
+
+### Notations
+
+$$\odot$$ = AND
+
+$$\oplus$$ = OR
+
+$$\otimes$$ = XOR
+
+$$c_i$$ is the carry bit generated at the i-th position
+
+<!-- livebook:{"break_markdown":true} -->
+
+$$z_0 = x_0 \otimes y_0$$
+
+$$z_{45} = c_{44}$$
+
+$$z_i = (x_i \otimes y_i) \otimes c_{i-1}$$
+
+$$c_0 = x_0 \odot y_0$$
+
+$$c_i = (x_i \odot y_i) \oplus ((x_i \otimes y_i) \odot c_{i-1})$$
+
+```elixir
+graph2 =
+  Graph.new()
+  |> Graph.add_edge("x00", "z00", label: :bxor)
+  |> Graph.add_edge("y00", "z00", label: :bxor)
+  |> Graph.add_edge("x00", "c00", label: :band)
+  |> Graph.add_edge("y00", "c00", label: :band)
+```
+
+```elixir
+graph2 =
+  for n <- 1..44, reduce: graph2 do
+    g ->
+      m = n |> to_string() |> String.pad_leading(2, "0")
+      p = (n - 1) |> to_string() |> String.pad_leading(2, "0")
+      carry = (n == 44) && "z45" || "c#{m}"
+      
+      g
+      ################### SUM BIT #######################
+      |> Graph.add_edge("x#{m}", "x^y#{m}", label: :bxor)
+      |> Graph.add_edge("y#{m}", "x^y#{m}", label: :bxor)
+      |> Graph.add_edge("c#{p}", "z#{m}", label: :bxor)
+      |> Graph.add_edge("x^y#{m}", "z#{m}", label: :bxor)
+      ################## CARRY BIT ######################
+      |> Graph.add_edge("x#{m}", "x.y#{m}", label: :band)
+      |> Graph.add_edge("y#{m}", "x.y#{m}", label: :band)
+      |> Graph.add_edge("c#{p}", "c.x^y#{m}", label: :band)
+      |> Graph.add_edge("x^y#{m}", "c.x^y#{m}", label: :band)
+      |> Graph.add_edge("x.y#{m}", carry, label: :bor)
+      |> Graph.add_edge("c.x^y#{m}", carry, label: :bor)
+  end
+```
+
+### Sanity check
+
+```elixir
+Graph.num_vertices(graph) == Graph.num_vertices(graph2)
+```
+
+```elixir
+Graph.num_edges(graph) == Graph.num_edges(graph2)
+```
+
+```elixir
+x = :rand.uniform(Bitwise.bsl(1, 44)) - 1
+y = :rand.uniform(Bitwise.bsl(1, 44)) - 1
+z = eval.(graph2, x, y)
+
+x + y == z
+```
+
+### Problem Solving
+
+```elixir
+for i <- 0..45,
+    n = String.pad_leading(to_string(i), 2, "0"),
+    z = "z#{n}",
+    reachings = Graph.reaching(graph, [z]),
+    xs = Enum.filter(reachings, &match?(<<?x, _, _>>, &1)),
+    xs = Enum.sort(xs, :desc) do
+  {z, xs}
+end
+```
+
+```elixir
+for shift <- 0..43,
+    x = y = Bitwise.bsl(1, shift),
+    z = eval.(graph, x, y),
+    s = x + y,
+    diff = Bitwise.bxor(z, s) do
+  {shift, Integer.to_string(diff, 2)}
+end
+```
+
+```elixir
+Graph.out_edges(graph, "qjb")
+```
+
+qjb, gvw
+
+```elixir
+graph =
+  graph
+  |> Graph.delete_edge("qjb", "vdr")
+  |> Graph.delete_edge("gvw", "qqm")
+  |> Graph.delete_edge("gvw", "z08")
+  |> Graph.add_edge("qjb", "qqm", label: :band)
+  |> Graph.add_edge("qjb", "z08", label: :bxor)
+  |> Graph.add_edge("gvw", "vdr", label: :bor)
+```
+
+```elixir
+for shift <- 0..43,
+    x = y = Bitwise.bsl(1, shift),
+    z = eval.(graph, x, y),
+    s = x + y,
+    diff = Bitwise.bxor(z, s) do
+  {shift, Integer.to_string(diff, 2)}
+end
+```
+
+```elixir
+Graph.out_edges(graph, "fbv")
+```
+
+```elixir
+Graph.in_edges(graph, "jgc")
+```
+
+z15, jgc
+
+```elixir
+graph =
+  graph
+  |> Graph.delete_edge("x15", "z15")
+  |> Graph.delete_edge("y15", "z15")
+  |> Graph.delete_edge("fbv", "jgc")
+  |> Graph.delete_edge("rgt", "jgc")
+  |> Graph.add_edge("x15", "jgc", label: :band)
+  |> Graph.add_edge("y15", "jgc", label: :band)
+  |> Graph.add_edge("fbv", "z15", label: :bxor)
+  |> Graph.add_edge("rgt", "z15", label: :bxor)
+```
+
+```elixir
+for shift <- 0..43,
+    x = y = Bitwise.bsl(1, shift),
+    z = eval.(graph, x, y),
+    s = x + y,
+    diff = Bitwise.bxor(z, s) do
+  {shift, Integer.to_string(diff, 2)}
+end
+```
+
+```elixir
+Graph.out_edges(graph, "tdc")
+```
+
+drg, z22
+
+```elixir
+Graph.in_edges(graph, "drg")
+```
+
+```elixir
+Graph.in_edges(graph, "z22")
+```
+
+```elixir
+graph =
+  graph
+  |> Graph.delete_edges("hwm", "drg")
+  |> Graph.delete_edges("tdc", "drg")
+  |> Graph.delete_edges("hwm", "z22")
+  |> Graph.delete_edges("tdc", "z22")
+  |> Graph.add_edge("hwm", "drg", label: :band)
+  |> Graph.add_edge("tdc", "drg", label: :band)
+  |> Graph.add_edge("hwm", "z22", label: :bxor)
+  |> Graph.add_edge("tdc", "z22", label: :bxor)
+```
+
+```elixir
+for shift <- 0..43,
+    x = y = Bitwise.bsl(1, shift),
+    z = eval.(graph, x, y),
+    s = x + y,
+    diff = Bitwise.bxor(z, s) do
+  {shift, Integer.to_string(diff, 2)}
+end
+```
+
+```elixir
+Graph.out_edges(graph, "vcs")
+```
+
+z35, jbp
+
+```elixir
+~w[
+  z35
+  jbp
+  drg
+  z22
+  z15
+  jgc
+  qjb
+  gvw
+]
+|> Enum.sort()
+|> Enum.join(",")
+```
+
+<!-- livebook:{"offset":6883,"stamp":{"token":"XCP.fhmlwF7X7vKgTHzO17XvpaGIxM4lZ9d0isT9d2cyLv0X3VKNys-P4r-S66TB_I_bvC0WmGAPuwsOpnLPoDE4etNMGbUvgIUPXRixIN2jts3d0hzSTY8","version":2}} -->
